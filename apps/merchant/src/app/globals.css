@@ -1,0 +1,256 @@
+@import "tailwindcss";
+
+:root {
+  --app-primary: 5 150 105;
+  --app-primary-strong: 6 95 70;
+  --app-primary-soft: 209 250 229;
+  --app-accent: 16 185 129;
+  --app-surface: 255 255 255;
+  --app-page: 240 253 248;
+  --app-outline: 203 213 225;
+  --app-ink: 15 23 42;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(5, 150, 105, 0.16), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.1), transparent 30%),
+    linear-gradient(180deg, #fcfffd 0%, rgb(var(--app-page)) 56%, #edf7f3 100%);
+  color: rgb(var(--app-ink));
+}
+
+::selection {
+  background: rgba(5, 150, 105, 0.14);
+  color: rgb(var(--app-ink));
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select):focus {
+  outline: none;
+  border-color: rgba(5, 150, 105, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(5, 150, 105, 0.12),
+    0 8px 20px rgba(5, 150, 105, 0.08);
+}
+
+:where(button, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button:disabled) {
+  cursor: not-allowed;
+}
+
+.material-surface {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 18px 34px rgba(15, 23, 42, 0.08),
+    0 2px 8px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(14px);
+}
+
+.material-card {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 14px 30px rgba(15, 23, 42, 0.07),
+    0 2px 8px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(14px);
+}
+
+.material-card-flat {
+  border-radius: 22px;
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.05),
+    0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.material-stat {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.84));
+  box-shadow:
+    0 10px 22px rgba(15, 23, 42, 0.06),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.material-hero {
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background:
+    linear-gradient(135deg, rgba(5, 150, 105, 0.94), rgba(16, 185, 129, 0.88)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+  box-shadow:
+    0 22px 46px rgba(5, 150, 105, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.material-title {
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.material-subtitle {
+  color: rgb(71 85 105);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.material-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.78rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(5, 150, 105, 0.12);
+  background: rgba(5, 150, 105, 0.1);
+  color: rgb(6 95 70);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.material-chip-muted {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(148, 163, 184, 0.1);
+  color: rgb(71 85 105);
+}
+
+.material-button-primary {
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgb(var(--app-primary)), rgb(var(--app-accent)));
+  color: white;
+  box-shadow: 0 12px 22px rgba(5, 150, 105, 0.18);
+}
+
+.material-button-tonal {
+  border-radius: 16px;
+  border: 1px solid rgba(5, 150, 105, 0.12);
+  background: rgba(5, 150, 105, 0.1);
+  color: rgb(6 95 70);
+}
+
+.material-button-outlined {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.84);
+  color: rgb(51 65 85);
+}
+
+.material-empty {
+  border-radius: 24px;
+  border: 1px dashed rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+}
+
+.material-table-shell {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 12px 26px rgba(15, 23, 42, 0.05),
+    0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.material-table-shell table thead tr {
+  background: rgba(209, 250, 229, 0.44);
+}
+
+.material-table-shell table tbody tr:hover {
+  background: rgba(209, 250, 229, 0.22);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0.38rem 0.72rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-badge-neutral {
+  background: rgba(148, 163, 184, 0.14);
+  color: rgb(71 85 105);
+}
+
+.status-badge-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: rgb(5 150 105);
+}
+
+.status-badge-warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: rgb(180 83 9);
+}
+
+.status-badge-danger {
+  background: rgba(239, 68, 68, 0.14);
+  color: rgb(220 38 38);
+}
+
+.icon-tile {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: currentColor;
+}
+
+.material-alert {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.95rem 1rem;
+}
+
+.material-alert-danger {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(254, 242, 242, 0.9);
+  color: rgb(220 38 38);
+}
+
+.material-alert-warning {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(255, 251, 235, 0.92);
+  color: rgb(180 83 9);
+}
+
+.material-alert-info {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(236, 253, 245, 0.92);
+  color: rgb(6 95 70);
+}

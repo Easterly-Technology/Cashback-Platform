@@ -1,0 +1,39 @@
+name: Deploy to QA
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run Database Migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Deploy to Vercel (configure via Vercel GitHub integration)
+      # Or use vercel CLI:
+      # - name: Deploy Admin
+      #   run: cd apps/admin && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}

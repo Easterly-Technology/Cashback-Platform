@@ -1,0 +1,19 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm db:generate && pnpm turbo build --filter=@cashback/admin",
+  "crons": [
+    {
+      "path": "/api/cron/token-pool",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/token-release",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/marketplace-generate",
+      "schedule": "10 0 * * *"
+    }
+  ]
+}

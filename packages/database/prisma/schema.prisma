@@ -1,0 +1,375 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== IDENTITY ====================
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  phone         String?  @db.VarChar(20)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  name          String   @db.VarChar(100)
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  transactions      Transaction[]
+  tokenEntitlement  UserTokenEntitlement?
+  tokenReleaseLogs  TokenReleaseLog[]
+  marketplaceOrders MarketplaceOrder[]
+  withdrawalRequests WithdrawalRequest[]
+
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+
+  @@map("user_status")
+}
+
+model Merchant {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(200)
+  contactEmail  String   @unique @map("contact_email") @db.VarChar(255)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  rebatePct     Decimal  @default(0.10) @map("rebate_pct") @db.Decimal(5, 4)
+  serviceFeePct Decimal  @default(0.03) @map("service_fee_pct") @db.Decimal(5, 4)
+  status        MerchantStatus @default(PENDING)
+  bankInfo      Json?    @map("bank_info")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  products          Product[]
+  transactions      Transaction[]
+  transactionQrCodes TransactionQrCode[]
+  settlements       MerchantSettlement[]
+
+  @@map("merchants")
+}
+
+enum MerchantStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+
+  @@map("merchant_status")
+}
+
+model Admin {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("admins")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+
+  @@map("admin_role")
+}
+
+// ==================== CATALOG ====================
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  merchantId  String   @map("merchant_id") @db.Uuid
+  name        String   @db.VarChar(300)
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(18, 4)
+  category    String?  @db.VarChar(100)
+  status      ProductStatus @default(ACTIVE)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  merchant         Merchant          @relation(fields: [merchantId], references: [id])
+  inventory        Inventory?
+  transactionItems TransactionItem[]
+
+  @@index([merchantId])
+  @@map("products")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("product_status")
+}
+
+model Inventory {
+  id                String   @id @default(uuid()) @db.Uuid
+  productId         String   @unique @map("product_id") @db.Uuid
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(10) @map("low_stock_threshold")
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("inventory")
+}
+
+// ==================== TRANSACTIONS ====================
+
+model Transaction {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  merchantId   String   @map("merchant_id") @db.Uuid
+  qrCodeId     String?  @map("qr_code_id") @db.Uuid
+  totalAmount  Decimal  @map("total_amount") @db.Decimal(18, 4)
+  rebateAmount Decimal  @map("rebate_amount") @db.Decimal(18, 4)
+  serviceFee   Decimal  @map("service_fee") @db.Decimal(18, 4)
+  status       TransactionStatus @default(PENDING)
+  confirmedAt  DateTime? @map("confirmed_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User     @relation(fields: [userId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+  qrCode   TransactionQrCode? @relation(fields: [qrCodeId], references: [id])
+  items    TransactionItem[]
+
+  @@index([userId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  CANCELLED
+
+  @@map("transaction_status")
+}
+
+model TransactionItem {
+  id            String  @id @default(uuid()) @db.Uuid
+  transactionId String  @map("transaction_id") @db.Uuid
+  productId     String  @map("product_id") @db.Uuid
+  quantity      Int
+  unitPrice     Decimal @map("unit_price") @db.Decimal(18, 4)
+  lineTotal     Decimal @map("line_total") @db.Decimal(18, 4)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
+
+  @@map("transaction_items")
+}
+
+model TransactionQrCode {
+  id         String   @id @default(uuid()) @db.Uuid
+  merchantId String   @map("merchant_id") @db.Uuid
+  payload    Json     // items, amounts, etc.
+  hmac       String   @db.VarChar(64) // HMAC-SHA256 signature
+  status     QrCodeStatus @default(PENDING)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  merchant     Merchant      @relation(fields: [merchantId], references: [id])
+  transactions Transaction[]
+
+  @@index([merchantId])
+  @@map("transaction_qr_codes")
+}
+
+enum QrCodeStatus {
+  PENDING
+  SCANNED
+  CONFIRMED
+  EXPIRED
+
+  @@map("qr_code_status")
+}
+
+// ==================== TOKEN SYSTEM ====================
+
+model UserTokenEntitlement {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  totalSpending   Decimal  @default(0) @map("total_spending") @db.Decimal(18, 4)
+  entitledTokens  Decimal  @default(0) @map("entitled_tokens") @db.Decimal(18, 4)
+  releasedTokens  Decimal  @default(0) @map("released_tokens") @db.Decimal(18, 4)
+  availableTokens Decimal  @default(0) @map("available_tokens") @db.Decimal(18, 4)
+  releaseStartDate DateTime? @map("release_start_date") @db.Date
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_token_entitlements")
+}
+
+model TokenReleaseLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  releaseDate DateTime @map("release_date") @db.Date
+  amount      Decimal  @db.Decimal(18, 4)
+  cumulative  Decimal  @db.Decimal(18, 4)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, releaseDate])
+  @@map("token_release_log")
+}
+
+model DailyTokenPool {
+  id           String   @id @default(uuid()) @db.Uuid
+  poolDate     DateTime @unique @map("pool_date") @db.Date
+  totalSpending Decimal @map("total_spending") @db.Decimal(18, 4)
+  poolValue    Decimal  @map("pool_value") @db.Decimal(18, 4)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("daily_token_pool")
+}
+
+// ==================== MARKETPLACE ====================
+
+model MarketplaceListing {
+  id            String   @id @default(uuid()) @db.Uuid
+  listingDate   DateTime @map("listing_date") @db.Date
+  priceTier     Decimal  @map("price_tier") @db.Decimal(4, 2)
+  totalQuantity Decimal  @map("total_quantity") @db.Decimal(18, 4)
+  remainingQty  Decimal  @map("remaining_qty") @db.Decimal(18, 4)
+  status        ListingStatus @default(ACTIVE)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  orders MarketplaceOrder[]
+
+  @@index([listingDate, priceTier])
+  @@map("marketplace_listings")
+}
+
+enum ListingStatus {
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+
+  @@map("listing_status")
+}
+
+model MarketplaceOrder {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  listingId     String   @map("listing_id") @db.Uuid
+  idempotencyKey String? @map("idempotency_key") @db.VarChar(100)
+  tokenAmount   Decimal  @map("token_amount") @db.Decimal(18, 4)
+  pricePerToken Decimal  @map("price_per_token") @db.Decimal(4, 2)
+  cashValue     Decimal  @map("cash_value") @db.Decimal(18, 4)
+  status        OrderStatus @default(FILLED)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user    User               @relation(fields: [userId], references: [id])
+  listing MarketplaceListing @relation(fields: [listingId], references: [id])
+
+  @@index([userId, createdAt])
+  @@unique([userId, idempotencyKey])
+  @@map("marketplace_orders")
+}
+
+enum OrderStatus {
+  FILLED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+// ==================== FINANCE ====================
+
+model MerchantSettlement {
+  id              String   @id @default(uuid()) @db.Uuid
+  merchantId      String   @map("merchant_id") @db.Uuid
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+  totalRebate     Decimal  @map("total_rebate") @db.Decimal(18, 4)
+  totalServiceFee Decimal  @map("total_service_fee") @db.Decimal(18, 4)
+  totalOwed       Decimal  @map("total_owed") @db.Decimal(18, 4)
+  status          SettlementStatus @default(PENDING)
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@map("merchant_settlements")
+}
+
+enum SettlementStatus {
+  PENDING
+  INVOICED
+  PAID
+
+  @@map("settlement_status")
+}
+
+model WithdrawalRequest {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  amount    Decimal  @db.Decimal(18, 4)
+  status    WithdrawalStatus @default(PENDING)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("withdrawal_requests")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+
+  @@map("withdrawal_status")
+}
+
+// ==================== PLATFORM ====================
+
+model AuditLog {
+  id           BigInt   @id @default(autoincrement())
+  actorType    ActorType @map("actor_type")
+  actorId      String   @map("actor_id") @db.Uuid
+  action       String   @db.VarChar(100)
+  resourceType String   @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.Uuid
+  details      Json?
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([actorType, actorId, createdAt])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}
+
+enum ActorType {
+  USER
+  MERCHANT
+  ADMIN
+  SYSTEM
+
+  @@map("actor_type")
+}
+
+model PlatformSetting {
+  key         String   @id @db.VarChar(100)
+  value       Json
+  description String?  @db.Text
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("platform_settings")
+}
