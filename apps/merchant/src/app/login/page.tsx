@@ -48,6 +48,24 @@ export default function LoginPage() {
           <p className="material-subtitle mt-4 max-w-xl">
             We keep the callback path so a login prompt never resets your in-progress workflow.
           </p>
+          <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                Checkout Flow
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Jump back into QR generation and live transaction history.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Store Operations
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Monitor catalog health and settlement exposure from one place.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="material-card p-6 sm:p-8">
@@ -68,6 +86,10 @@ export default function LoginPage() {
 
           <div className="material-alert material-alert-info mt-4 text-sm">
             Demo credentials: <span className="font-semibold">merchant1@cashback.dev</span> / <span className="font-semibold">merchant123</span>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
+            Merchant access includes product management, QR sale generation, recent transactions, and settlement tracking.
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">

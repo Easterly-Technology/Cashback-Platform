@@ -28,7 +28,7 @@ export default async function RootLayout({
     : null;
 
   return (
-    <html lang="zh-CN">
+    <html lang="en">
       <body className={`${jakarta.className} antialiased`}>
         <AppShell initialUser={initialUser}>{children}</AppShell>
       </body>

@@ -1,13 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@cashback/database";
+import { formatCurrency } from "@cashback/shared";
 import { auth } from "@/lib/auth";
-
-function formatCurrency(value: number) {
-  return `RM${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 export default async function SettlementsPage() {
   const session = await auth();

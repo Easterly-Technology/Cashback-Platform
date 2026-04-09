@@ -1,14 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@cashback/database";
-import { getTokenSettingsSnapshot } from "@cashback/shared";
+import { formatCurrency, getTokenSettingsSnapshot } from "@cashback/shared";
 import { auth } from "@/lib/auth";
-
-function formatCurrency(value: number) {
-  return `RM${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+import { getUserCashSummary } from "@/lib/cash-summary";
 
 export default async function TransactionsPage() {
   const session = await auth();
@@ -18,7 +13,7 @@ export default async function TransactionsPage() {
     redirect("/login");
   }
 
-  const [transactions, marketplaceOrders, settings] = await Promise.all([
+  const [transactions, marketplaceOrders, settings, cashSummary] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId },
       include: { merchant: { select: { name: true } } },
@@ -38,22 +33,70 @@ export default async function TransactionsPage() {
         },
       },
     }),
+    getUserCashSummary(userId),
   ]);
   const tokenSettings = getTokenSettingsSnapshot(settings);
 
   return (
-    <div className="py-4">
-      <h1 className="text-xl font-bold mb-4">Transaction History</h1>
+    <div className="space-y-5 py-4">
+      <div className="material-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span className="material-chip">Wallet Snapshot</span>
+            <h1 className="mt-3 text-xl font-bold tracking-tight text-slate-950">
+              Transaction History
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Review confirmed purchases, token trades, and the cash already unlocked from selling tokens.
+            </p>
+          </div>
+          <Link
+            href="/profile#cash-wallet"
+            className="material-button-outlined px-4 py-2.5 text-sm font-semibold"
+          >
+            Request Withdrawal
+          </Link>
+        </div>
+      </div>
 
-      <h2 className="font-semibold mb-2 text-sm text-gray-500">Purchases</h2>
-      <div className="bg-white rounded-xl border mb-6">
+      <div className="material-card-flat p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div>
+            <p className="text-xs text-gray-400">Available to Withdraw</p>
+            <p className="text-xl font-bold text-emerald-600">
+              {formatCurrency(cashSummary.availableToWithdraw)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Pending Withdrawals</p>
+            <p className="text-xl font-bold text-amber-600">
+              {formatCurrency(cashSummary.pendingWithdrawalAmount)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Withdrawn So Far</p>
+            <p className="text-xl font-bold text-slate-900">
+              {formatCurrency(cashSummary.withdrawnToDate)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Lifetime Sold Value</p>
+            <p className="text-xl font-bold text-slate-900">
+              {formatCurrency(cashSummary.lifetimeProceeds)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <h2 className="font-semibold text-sm text-gray-500">Purchases</h2>
+      <div className="material-card overflow-hidden">
         {transactions.length === 0 ? (
           <p className="p-4 text-sm text-gray-400">No purchases yet</p>
         ) : (
           transactions.map((tx) => (
             <div
               key={tx.id}
-              className="flex justify-between items-center p-3 border-b last:border-0"
+              className="flex justify-between items-center border-b border-slate-100 px-4 py-3 last:border-0"
             >
               <div>
                 <p className="text-sm font-medium">{tx.merchant.name}</p>
@@ -76,17 +119,17 @@ export default async function TransactionsPage() {
         )}
       </div>
 
-      <h2 className="font-semibold mb-2 text-sm text-gray-500">
+      <h2 className="font-semibold text-sm text-gray-500">
         Token Trades
       </h2>
-      <div className="bg-white rounded-xl border">
+      <div className="material-card overflow-hidden">
         {marketplaceOrders.length === 0 ? (
           <p className="p-4 text-sm text-gray-400">No token trades yet</p>
         ) : (
           marketplaceOrders.map((order) => (
             <div
               key={order.id}
-              className="flex justify-between items-center p-3 border-b last:border-0"
+              className="flex justify-between items-center border-b border-slate-100 px-4 py-3 last:border-0"
             >
               <div>
                 <p className="text-sm font-medium">
@@ -101,7 +144,7 @@ export default async function TransactionsPage() {
                   -{Number(order.tokenAmount).toLocaleString()} tokens
                 </p>
                 <p className="text-xs text-green-600 font-medium">
-                  {formatCurrency(Number(order.cashValue))} received
+                  {formatCurrency(Number(order.cashValue))} credited
                 </p>
               </div>
             </div>

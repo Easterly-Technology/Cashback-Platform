@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
@@ -12,9 +11,14 @@ const navItems = [
   { href: "/settlements", label: "Settlements" },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
 
   if (pathname.startsWith("/login")) {
     return null;
@@ -28,7 +32,7 @@ export function Sidebar() {
       <Link
         key={item.href}
         href={item.href}
-        onClick={() => setOpen(false)}
+        onClick={onClose}
         className={`block rounded-[18px] border px-4 py-3 text-sm transition-all ${
           isActive
             ? "border-emerald-100 bg-emerald-50 font-semibold text-emerald-700 shadow-sm"
@@ -42,37 +46,15 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-40 px-4 pt-4 lg:hidden">
-        <div className="material-surface flex items-center justify-between rounded-[28px] px-4 py-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700/80">
-              Cashback
-            </p>
-            <p className="text-sm font-semibold text-slate-950">
-              Merchant Portal
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="material-button-tonal px-4 py-2 text-sm font-semibold"
-            aria-expanded={open}
-            aria-label="Toggle navigation"
-          >
-            {open ? "Close" : "Menu"}
-          </button>
-        </div>
-      </div>
-
       <div
-        className={`fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-[2px] transition lg:hidden ${
+        className={`fixed inset-0 z-50 bg-slate-950/72 backdrop-blur-sm transition lg:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
-        onClick={() => setOpen(false)}
+        onClick={onClose}
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/70 bg-white/90 text-slate-900 shadow-[0_30px_80px_rgba(15,23,42,0.28)] backdrop-blur-2xl transition-transform lg:w-72 lg:rounded-r-[32px] lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/70 bg-white/95 text-slate-900 shadow-[0_30px_80px_rgba(15,23,42,0.32)] backdrop-blur-xl transition-transform lg:w-72 lg:rounded-r-[32px] lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -89,7 +71,7 @@ export function Sidebar() {
           {navLinks}
         </nav>
         <div className="border-t border-emerald-100 px-6 py-5 text-xs text-slate-500">
-          Cashback Platform
+          Merchant Portal v0.1
         </div>
       </aside>
     </>

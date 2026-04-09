@@ -209,6 +209,11 @@ textarea {
   color: rgb(5 150 105);
 }
 
+.status-badge-info {
+  background: rgba(37, 99, 235, 0.14);
+  color: rgb(29 78 216);
+}
+
 .status-badge-warning {
   background: rgba(245, 158, 11, 0.14);
   color: rgb(180 83 9);

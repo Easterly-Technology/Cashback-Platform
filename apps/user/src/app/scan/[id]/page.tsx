@@ -111,35 +111,71 @@ export default function ScanConfirmPage() {
 
   if (confirmed) {
     return (
-      <div className="material-card py-8 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">
-          ✓
+      <div className="space-y-4 py-4">
+        <div className="material-card py-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">
+            ✓
+          </div>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950">
+            Purchase Confirmed
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {details.merchant} • RM{details.totalAmount.toFixed(2)}
+          </p>
         </div>
-        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950">
-          Transaction Confirmed
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          RM{details.totalAmount.toFixed(2)} at {details.merchant}
-        </p>
-        <p className="mt-2 font-medium text-emerald-600">
-          +{details.tokensEntitled.toLocaleString()} tokens entitled
-        </p>
-        <p className="mt-1 text-xs text-slate-400">
-          Tokens will start releasing tomorrow at midnight
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => router.push("/")}
-            className="material-button-primary px-5 py-2.5 text-sm font-semibold"
-          >
-            Back to Dashboard
-          </button>
-          <Link
-            href="/tokens"
-            className="material-button-outlined px-5 py-2.5 text-sm font-semibold"
-          >
-            View Tokens
-          </Link>
+
+        <div className="material-card-flat p-5">
+          <span className="material-chip">What Happens Next</span>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Purchase Recorded
+              </p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">
+                Your receipt is now in transaction history.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-700">
+                Token Entitlement
+              </p>
+              <p className="mt-2 text-lg font-bold text-emerald-700">
+                +{details.tokensEntitled.toLocaleString()} tokens
+              </p>
+            </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-blue-700">
+                Release Timing
+              </p>
+              <p className="mt-2 text-sm font-semibold text-blue-800">
+                Daily release starts tomorrow at midnight.
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            You can track this purchase from your dashboard, then follow released
+            tokens in the Tokens screen until they are ready for exchange.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              onClick={() => router.push("/")}
+              className="material-button-primary px-5 py-2.5 text-sm font-semibold"
+            >
+              Back to Dashboard
+            </button>
+            <Link
+              href="/tokens"
+              className="material-button-outlined px-5 py-2.5 text-sm font-semibold"
+            >
+              View Tokens
+            </Link>
+            <Link
+              href="/transactions"
+              className="material-button-outlined px-5 py-2.5 text-sm font-semibold"
+            >
+              View History
+            </Link>
+          </div>
         </div>
       </div>
     );

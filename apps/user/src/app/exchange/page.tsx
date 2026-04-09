@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
 interface Listing {
@@ -12,6 +13,13 @@ interface Listing {
 
 interface Entitlement {
   availableTokens: number;
+}
+
+interface CashSummary {
+  availableToWithdraw: number;
+  pendingWithdrawalAmount: number;
+  withdrawnToDate: number;
+  lifetimeProceeds: number;
 }
 
 interface RecentOrder {
@@ -48,6 +56,7 @@ export default function ExchangePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
+  const [cashSummary, setCashSummary] = useState<CashSummary | null>(null);
   const [exchangeEnabled, setExchangeEnabled] = useState(true);
   const [lastUpdate, setLastUpdate] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("market");
@@ -55,6 +64,8 @@ export default function ExchangePage() {
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(true);
   const [selling, setSelling] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [buyInfoOpen, setBuyInfoOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -71,9 +82,11 @@ export default function ExchangePage() {
       const exchangeData = (await exchangeRes.json()) as {
         exchangeEnabled: boolean;
         listings: Listing[];
+        cashSummary: CashSummary | null;
         recentOrders: RecentOrder[];
       };
       setListings(exchangeData.listings);
+      setCashSummary(exchangeData.cashSummary);
       setRecentOrders(exchangeData.recentOrders);
       setExchangeEnabled(exchangeData.exchangeEnabled);
       setLastUpdate(new Date().toLocaleString());
@@ -164,6 +177,7 @@ export default function ExchangePage() {
       setAmount("");
     } else {
       setSelectedId(row.id);
+      setBuyInfoOpen(false);
       setAmount("");
       setError("");
       setSuccess("");
@@ -208,6 +222,26 @@ export default function ExchangePage() {
         </div>
       </div>
 
+      <div className="material-card-flat flex items-center gap-4 px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="material-chip">Cash Wallet</span>
+            <span className="text-lg font-bold text-emerald-700">
+              {formatMoney(cashSummary?.availableToWithdraw ?? 0)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Pending {formatMoney(cashSummary?.pendingWithdrawalAmount ?? 0)} &middot; Withdrawn {formatMoney(cashSummary?.withdrawnToDate ?? 0)}
+          </p>
+        </div>
+        <Link
+          href="/profile#cash-wallet"
+          className="material-button-outlined shrink-0 px-3 py-2 text-xs font-semibold"
+        >
+          Request Withdrawal
+        </Link>
+      </div>
+
       {loading ? (
         <div className="material-empty flex items-center justify-center px-6 py-16 text-sm text-slate-400">
           Loading exchange...
@@ -222,13 +256,29 @@ export default function ExchangePage() {
       ) : activeTab === "market" ? (
         <>
           {/* Exchange Header */}
-          <div>
-            <h2 className="text-lg font-bold text-slate-950">Exchange Rates</h2>
-            {lastUpdate && (
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                Last Update: {lastUpdate}
-              </p>
-            )}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">Exchange Rates</h2>
+              {lastUpdate && (
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Last Update: {lastUpdate}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              disabled={loading}
+              className="material-button-outlined flex items-center gap-1.5 px-3 py-2 text-xs font-semibold"
+            >
+              <svg className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M3 21v-5h5" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              Refresh
+            </button>
           </div>
 
           {/* Order Book */}
@@ -369,7 +419,8 @@ export default function ExchangePage() {
               )}
 
               <button
-                onClick={() => void handleSell()}
+                type="button"
+                onClick={() => setConfirming(true)}
                 disabled={
                   !exchangeEnabled ||
                   selling ||
@@ -381,29 +432,85 @@ export default function ExchangePage() {
               >
                 {selling ? "Executing..." : "Sell Tokens"}
               </button>
+
+              {/* Sell Confirmation Dialog */}
+              {confirming && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+                  <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+                    <h3 className="text-lg font-bold text-slate-950">Confirm Trade</h3>
+                    <p className="mt-2 text-sm text-slate-600">
+                      You are about to sell{" "}
+                      <span className="font-semibold text-slate-900">
+                        {sellAmount.toLocaleString()} tokens
+                      </span>{" "}
+                      at{" "}
+                      <span className="font-mono font-semibold text-slate-900">
+                        {formatPrice(Number(selected.priceTier))}
+                      </span>{" "}
+                      per token for{" "}
+                      <span className="font-semibold text-emerald-700">
+                        {formatMoney(cashValue)}
+                      </span>.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      This action cannot be undone.
+                    </p>
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(false)}
+                        className="material-button-outlined px-4 py-2.5 text-sm font-semibold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirming(false);
+                          void handleSell();
+                        }}
+                        className="material-button-primary px-4 py-2.5 text-sm font-semibold"
+                      >
+                        Confirm Sell
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Buy / Sell Buttons */}
           {!selected && (
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                disabled
-                className="material-button-tonal min-h-12 px-6 py-3 text-sm font-semibold opacity-50"
-              >
-                Buy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const firstAvailable = displayRows.find((r) => r.sellQty > 0);
-                  if (firstAvailable) setSelectedId(firstAvailable.id);
-                }}
-                className="material-button-primary min-h-12 px-6 py-3 text-sm font-semibold transition hover:translate-y-[-1px]"
-              >
-                Sell
-              </button>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBuyInfoOpen((value) => !value)}
+                  className="material-button-tonal min-h-12 px-6 py-3 text-sm font-semibold transition hover:translate-y-[-1px]"
+                >
+                  Buy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBuyInfoOpen(false);
+                    const firstAvailable = displayRows.find((r) => r.sellQty > 0);
+                    if (firstAvailable) setSelectedId(firstAvailable.id);
+                  }}
+                  className="material-button-primary min-h-12 px-6 py-3 text-sm font-semibold transition hover:translate-y-[-1px]"
+                >
+                  Sell
+                </button>
+              </div>
+
+              {buyInfoOpen ? (
+                <div className="material-alert material-alert-info text-sm">
+                  Buy flow is coming soon. For now, the exchange is sell-active only,
+                  so you can convert released tokens into cash and request withdrawal
+                  from your wallet.
+                </div>
+              ) : null}
             </div>
           )}
         </>

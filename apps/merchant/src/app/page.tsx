@@ -2,14 +2,8 @@ import Link from "next/link";
 import type { SVGProps } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@cashback/database";
+import { formatCurrency } from "@cashback/shared";
 import { auth } from "@/lib/auth";
-
-function formatCurrency(value: number) {
-  return `RM${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 function IconBase(props: SVGProps<SVGSVGElement>) {
   return (
@@ -125,7 +119,7 @@ export default async function MerchantDashboard() {
           {merchant?.name ?? "Store"} Dashboard
         </h1>
         <p className="material-subtitle mt-3">
-          Live sales, inventory health, and settlement summary built for daily store operations.
+          Keep daily sales, in-progress checkout work, and inventory health in view before you check finance follow-up.
         </p>
       </div>
 
@@ -167,25 +161,29 @@ export default async function MerchantDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="material-stat p-5">
-          <p className="text-sm text-gray-500">Amount Owed to Platform</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight text-red-600">
-            {formatCurrency(totalOwed)}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">Today&apos;s rebate + fee</p>
-        </div>
-        <div className="material-stat p-5">
           <p className="text-sm text-gray-500">Today&apos;s Sales</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
             {formatCurrency(Number(todayTransactions._sum.totalAmount ?? 0))}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {todayTransactions._count} confirmed transactions
+            Revenue confirmed today
           </p>
         </div>
         <div className="material-stat p-5">
-          <p className="text-sm text-gray-500">Active Products</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">{activeProducts}</p>
-          <p className="text-xs text-gray-400 mt-1">{lowStockCount} low stock</p>
+          <p className="text-sm text-gray-500">Transactions</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">
+            {todayTransactions._count.toLocaleString()}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Confirmed sales today
+          </p>
+        </div>
+        <div className="material-stat p-5">
+          <p className="text-sm text-gray-500">Inventory Health</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">{lowStockCount}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            low-stock items across {activeProducts} active products
+          </p>
         </div>
       </div>
 
@@ -202,9 +200,9 @@ export default async function MerchantDashboard() {
           </Link>
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900">Settlement Snapshot</p>
+          <p className="text-sm font-semibold text-slate-900">Platform Settlement</p>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Today&apos;s confirmed sales currently translate into {formatCurrency(totalOwed)} owed to the platform.
+            Current confirmed sales translate into {formatCurrency(totalOwed)} owed to the platform through rebate and service fees.
           </p>
           <Link href="/settlements" className="mt-3 inline-flex text-sm font-semibold text-emerald-700">
             View settlements

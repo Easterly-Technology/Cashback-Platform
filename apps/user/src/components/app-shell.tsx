@@ -28,7 +28,7 @@ export default function AppShell({
     ? "mx-auto max-w-5xl px-4 py-8 sm:px-5 lg:py-12"
     : scanPage
       ? "mx-auto max-w-2xl px-4 py-6 sm:px-5"
-      : "mx-auto max-w-xl px-4 pb-32 pt-20 sm:px-5";
+      : "mx-auto max-w-xl px-4 pb-28 pt-16 sm:px-5";
 
   return (
     <>

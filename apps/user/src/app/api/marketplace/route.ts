@@ -9,6 +9,7 @@ import {
 } from "@cashback/shared";
 import Decimal from "decimal.js";
 import { auth } from "@/lib/auth";
+import { getUserCashSummary } from "@/lib/cash-summary";
 
 function getDateOnly(date: Date) {
   return new Date(date.toISOString().split("T")[0]);
@@ -16,8 +17,10 @@ function getDateOnly(date: Date) {
 
 export async function GET() {
   const today = getDateOnly(new Date());
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
 
-  const [listings, recentOrders, settings] = await Promise.all([
+  const [listings, recentOrders, settings, cashSummary] = await Promise.all([
     prisma.marketplaceListing.findMany({
       where: { listingDate: today },
       orderBy: { priceTier: "asc" },
@@ -38,6 +41,7 @@ export async function GET() {
         },
       },
     }),
+    userId ? getUserCashSummary(userId) : Promise.resolve(null),
   ]);
 
   const normalizedListings = listings
@@ -55,6 +59,7 @@ export async function GET() {
     marketplaceEnabled: getTokenSettingsSnapshot(settings).marketplaceEnabled,
     exchangeEnabled: getTokenSettingsSnapshot(settings).marketplaceEnabled,
     listings: normalizedListings,
+    cashSummary,
     recentOrders: recentOrders.map((order) => ({
       id: order.id,
       userName: order.user.name,
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     if (!getTokenSettingsSnapshot(settings).marketplaceEnabled) {
       return Response.json(
-        { error: "Exchange center is currently disabled" },
+        { error: "Exchange is currently disabled" },
         { status: 409 },
       );
     }
@@ -215,7 +220,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json(result);
   } catch (error: any) {
-    console.error("[USER] Exchange center trade failed:", error);
+    console.error("[USER] Exchange trade failed:", error);
     const message = error?.message ?? "Internal server error";
     const status =
       error?.code === "P2002"

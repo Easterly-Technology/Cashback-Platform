@@ -49,6 +49,24 @@ export default function LoginPage() {
           <p className="material-subtitle mt-4 max-w-xl">
             Sign in to check your balances, browse the marketplace, and use the exchange with a cleaner app-first experience.
           </p>
+          <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+                Rewards Wallet
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Track token release progress and cash available for withdrawal.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Purchase Flow
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Confirm merchant receipts, browse products, and exchange released tokens.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="material-card p-6 sm:p-8">

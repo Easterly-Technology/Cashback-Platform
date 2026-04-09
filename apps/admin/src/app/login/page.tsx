@@ -48,6 +48,24 @@ export default function LoginPage() {
           <p className="material-subtitle mt-4 max-w-xl">
             Sign in and we&apos;ll send you straight back to the page you were trying to open.
           </p>
+          <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">
+                Operating Queue
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Review withdrawals, merchant approvals, and flagged transactions quickly.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Oversight
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Monitor exchange health, token pool generation, and audit-safe changes.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="material-card p-6 sm:p-8">
@@ -66,6 +84,10 @@ export default function LoginPage() {
 
           <div className="material-alert material-alert-info mt-4 text-sm">
             Demo credentials: <span className="font-semibold">admin@cashback.dev</span> / <span className="font-semibold">admin123</span>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 text-sm text-indigo-900">
+            Admin access covers withdrawals, merchant approvals, exchange monitoring, and the audit log.
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
