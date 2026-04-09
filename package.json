@@ -12,6 +12,7 @@
     "db:migrate": "pnpm --filter @cashback/database migrate:dev",
     "db:seed:exchange": "node packages/database/prisma/seed-exchange.mjs",
     "db:seed": "pnpm --filter @cashback/database seed",
+    "db:seed:preview": "pnpm db:seed && pnpm db:seed:exchange",
     "db:studio": "pnpm --filter @cashback/database studio"
   },
   "devDependencies": {

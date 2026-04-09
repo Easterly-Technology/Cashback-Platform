@@ -99,203 +99,216 @@ if (!process.env.DATABASE_URL) {
 }
 
 const prisma = new PrismaClient();
+const seedLockId = 46847001;
+
+async function withSeedLock(callback) {
+  await prisma.$executeRawUnsafe(`SELECT pg_advisory_lock(${seedLockId})`);
+
+  try {
+    return await callback();
+  } finally {
+    await prisma.$executeRawUnsafe(`SELECT pg_advisory_unlock(${seedLockId})`);
+  }
+}
 
 async function main() {
-  const today = getDateOnly(new Date());
-  const poolValue = toPositiveNumber(
-    process.env.EXCHANGE_SEED_POOL_VALUE,
-    DEFAULT_POOL_VALUE,
-  );
-  const minTotalSpending = toPositiveNumber(
-    process.env.EXCHANGE_SEED_TOTAL_SPENDING,
-    DEFAULT_TOTAL_SPENDING,
-  );
-  const minEntitledTokens = toPositiveNumber(
-    process.env.EXCHANGE_SEED_ENTITLED_TOKENS,
-    DEFAULT_ENTITLED_TOKENS,
-  );
-  const minReleasedTokens = toPositiveNumber(
-    process.env.EXCHANGE_SEED_RELEASED_TOKENS,
-    DEFAULT_RELEASED_TOKENS,
-  );
-  const minAvailableTokens = toPositiveNumber(
-    process.env.EXCHANGE_SEED_AVAILABLE_TOKENS,
-    DEFAULT_AVAILABLE_TOKENS,
-  );
-
-  const [activeUsers, distributionSetting, existingListings] = await Promise.all([
-    prisma.user.findMany({
-      where: { status: "ACTIVE" },
-      include: { tokenEntitlement: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.platformSetting.findUnique({
-      where: { key: "marketplace_distribution" },
-    }),
-    prisma.marketplaceListing.findMany({
-      where: { listingDate: today },
-      orderBy: { priceTier: "asc" },
-    }),
-  ]);
-
-  if (activeUsers.length === 0) {
-    throw new Error("No active users found. Run `pnpm db:seed` first.");
-  }
-
-  const distribution = normalizeDistribution(distributionSetting?.value);
-  const listingMap = new Map(
-    existingListings.map((listing) => [Number(listing.priceTier).toFixed(2), listing]),
-  );
-
-  await prisma.platformSetting.upsert({
-    where: { key: "marketplace_enabled" },
-    update: {
-      value: true,
-      description: "Whether the marketplace is active",
-    },
-    create: {
-      key: "marketplace_enabled",
-      value: true,
-      description: "Whether the marketplace is active",
-    },
-  });
-
-  await prisma.platformSetting.upsert({
-    where: { key: "marketplace_distribution" },
-    update: {
-      value: distribution,
-      description: "Distribution of token pool across price tiers",
-    },
-    create: {
-      key: "marketplace_distribution",
-      value: distribution,
-      description: "Distribution of token pool across price tiers",
-    },
-  });
-
-  await prisma.dailyTokenPool.upsert({
-    where: { poolDate: today },
-    update: {
-      poolValue,
-      totalSpending: minTotalSpending * activeUsers.length,
-    },
-    create: {
-      poolDate: today,
-      poolValue,
-      totalSpending: minTotalSpending * activeUsers.length,
-    },
-  });
-
-  const seededUsers = [];
-  for (const user of activeUsers) {
-    const nextAvailable = Math.max(
-      Number(user.tokenEntitlement?.availableTokens ?? 0),
-      minAvailableTokens,
+  await withSeedLock(async () => {
+    const today = getDateOnly(new Date());
+    const poolValue = toPositiveNumber(
+      process.env.EXCHANGE_SEED_POOL_VALUE,
+      DEFAULT_POOL_VALUE,
     );
-    const nextReleased = Math.max(
-      Number(user.tokenEntitlement?.releasedTokens ?? 0),
-      minReleasedTokens,
-      nextAvailable,
+    const minTotalSpending = toPositiveNumber(
+      process.env.EXCHANGE_SEED_TOTAL_SPENDING,
+      DEFAULT_TOTAL_SPENDING,
     );
-    const nextEntitled = Math.max(
-      Number(user.tokenEntitlement?.entitledTokens ?? 0),
-      minEntitledTokens,
-      nextReleased,
+    const minEntitledTokens = toPositiveNumber(
+      process.env.EXCHANGE_SEED_ENTITLED_TOKENS,
+      DEFAULT_ENTITLED_TOKENS,
     );
-    const nextSpending = Math.max(
-      Number(user.tokenEntitlement?.totalSpending ?? 0),
-      minTotalSpending,
+    const minReleasedTokens = toPositiveNumber(
+      process.env.EXCHANGE_SEED_RELEASED_TOKENS,
+      DEFAULT_RELEASED_TOKENS,
+    );
+    const minAvailableTokens = toPositiveNumber(
+      process.env.EXCHANGE_SEED_AVAILABLE_TOKENS,
+      DEFAULT_AVAILABLE_TOKENS,
     );
 
-    await prisma.userTokenEntitlement.upsert({
-      where: { userId: user.id },
+    const [activeUsers, distributionSetting, existingListings] = await Promise.all([
+      prisma.user.findMany({
+        where: { status: "ACTIVE" },
+        include: { tokenEntitlement: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.platformSetting.findUnique({
+        where: { key: "marketplace_distribution" },
+      }),
+      prisma.marketplaceListing.findMany({
+        where: { listingDate: today },
+        orderBy: { priceTier: "asc" },
+      }),
+    ]);
+
+    if (activeUsers.length === 0) {
+      throw new Error("No active users found. Run `pnpm db:seed` first.");
+    }
+
+    const distribution = normalizeDistribution(distributionSetting?.value);
+    const listingMap = new Map(
+      existingListings.map((listing) => [Number(listing.priceTier).toFixed(2), listing]),
+    );
+
+    await prisma.platformSetting.upsert({
+      where: { key: "marketplace_enabled" },
       update: {
-        totalSpending: nextSpending,
-        entitledTokens: nextEntitled,
-        releasedTokens: nextReleased,
-        availableTokens: nextAvailable,
-        releaseStartDate: user.tokenEntitlement?.releaseStartDate ?? today,
+        value: true,
+        description: "Whether the marketplace is active",
       },
       create: {
-        userId: user.id,
-        totalSpending: nextSpending,
-        entitledTokens: nextEntitled,
-        releasedTokens: nextReleased,
-        availableTokens: nextAvailable,
-        releaseStartDate: today,
+        key: "marketplace_enabled",
+        value: true,
+        description: "Whether the marketplace is active",
       },
     });
 
-    seededUsers.push({
-      email: user.email,
-      availableTokens: nextAvailable,
-      releasedTokens: nextReleased,
-      entitledTokens: nextEntitled,
+    await prisma.platformSetting.upsert({
+      where: { key: "marketplace_distribution" },
+      update: {
+        value: distribution,
+        description: "Distribution of token pool across price tiers",
+      },
+      create: {
+        key: "marketplace_distribution",
+        value: distribution,
+        description: "Distribution of token pool across price tiers",
+      },
     });
-  }
 
-  const seededListings = [];
-  for (const [priceTier, pct] of Object.entries(distribution)) {
-    const targetRemainingQty = Math.floor((poolValue * pct) / Number(priceTier));
-    if (targetRemainingQty <= 0) continue;
+    await prisma.dailyTokenPool.upsert({
+      where: { poolDate: today },
+      update: {
+        poolValue,
+        totalSpending: minTotalSpending * activeUsers.length,
+      },
+      create: {
+        poolDate: today,
+        poolValue,
+        totalSpending: minTotalSpending * activeUsers.length,
+      },
+    });
 
-    const existing = listingMap.get(Number(priceTier).toFixed(2));
-
-    if (existing) {
-      const consumedQty = Math.max(
-        Number(existing.totalQuantity) - Number(existing.remainingQty),
-        0,
+    const seededUsers = [];
+    for (const user of activeUsers) {
+      const nextAvailable = Math.max(
+        Number(user.tokenEntitlement?.availableTokens ?? 0),
+        minAvailableTokens,
+      );
+      const nextReleased = Math.max(
+        Number(user.tokenEntitlement?.releasedTokens ?? 0),
+        minReleasedTokens,
+        nextAvailable,
+      );
+      const nextEntitled = Math.max(
+        Number(user.tokenEntitlement?.entitledTokens ?? 0),
+        minEntitledTokens,
+        nextReleased,
+      );
+      const nextSpending = Math.max(
+        Number(user.tokenEntitlement?.totalSpending ?? 0),
+        minTotalSpending,
       );
 
-      const updated = await prisma.marketplaceListing.update({
-        where: { id: existing.id },
+      await prisma.userTokenEntitlement.upsert({
+        where: { userId: user.id },
+        update: {
+          totalSpending: nextSpending,
+          entitledTokens: nextEntitled,
+          releasedTokens: nextReleased,
+          availableTokens: nextAvailable,
+          releaseStartDate: user.tokenEntitlement?.releaseStartDate ?? today,
+        },
+        create: {
+          userId: user.id,
+          totalSpending: nextSpending,
+          entitledTokens: nextEntitled,
+          releasedTokens: nextReleased,
+          availableTokens: nextAvailable,
+          releaseStartDate: today,
+        },
+      });
+
+      seededUsers.push({
+        email: user.email,
+        availableTokens: nextAvailable,
+        releasedTokens: nextReleased,
+        entitledTokens: nextEntitled,
+      });
+    }
+
+    const seededListings = [];
+    for (const [priceTier, pct] of Object.entries(distribution)) {
+      const targetRemainingQty = Math.floor((poolValue * pct) / Number(priceTier));
+      if (targetRemainingQty <= 0) continue;
+
+      const existing = listingMap.get(Number(priceTier).toFixed(2));
+
+      if (existing) {
+        const consumedQty = Math.max(
+          Number(existing.totalQuantity) - Number(existing.remainingQty),
+          0,
+        );
+
+        const updated = await prisma.marketplaceListing.update({
+          where: { id: existing.id },
+          data: {
+            totalQuantity: consumedQty + targetRemainingQty,
+            remainingQty: targetRemainingQty,
+            status: targetRemainingQty > 0 ? "ACTIVE" : "EXHAUSTED",
+          },
+        });
+
+        seededListings.push({
+          priceTier: Number(updated.priceTier),
+          remainingQty: Number(updated.remainingQty),
+          totalQuantity: Number(updated.totalQuantity),
+          action: "refilled",
+        });
+        continue;
+      }
+
+      const created = await prisma.marketplaceListing.create({
         data: {
-          totalQuantity: consumedQty + targetRemainingQty,
+          listingDate: today,
+          priceTier: Number(priceTier),
+          totalQuantity: targetRemainingQty,
           remainingQty: targetRemainingQty,
-          status: targetRemainingQty > 0 ? "ACTIVE" : "EXHAUSTED",
+          status: "ACTIVE",
         },
       });
 
       seededListings.push({
-        priceTier: Number(updated.priceTier),
-        remainingQty: Number(updated.remainingQty),
-        totalQuantity: Number(updated.totalQuantity),
-        action: "refilled",
+        priceTier: Number(created.priceTier),
+        remainingQty: Number(created.remainingQty),
+        totalQuantity: Number(created.totalQuantity),
+        action: "created",
       });
-      continue;
     }
 
-    const created = await prisma.marketplaceListing.create({
-      data: {
-        listingDate: today,
-        priceTier: Number(priceTier),
-        totalQuantity: targetRemainingQty,
-        remainingQty: targetRemainingQty,
-        status: "ACTIVE",
-      },
-    });
-
-    seededListings.push({
-      priceTier: Number(created.priceTier),
-      remainingQty: Number(created.remainingQty),
-      totalQuantity: Number(created.totalQuantity),
-      action: "created",
-    });
-  }
-
-  console.log(
-    JSON.stringify(
-      {
-        success: true,
-        date: today.toISOString().split("T")[0],
-        poolValue,
-        usersSeeded: seededUsers,
-        listingsSeeded: seededListings,
-      },
-      null,
-      2,
-    ),
-  );
+    console.log(
+      JSON.stringify(
+        {
+          success: true,
+          date: today.toISOString().split("T")[0],
+          poolValue,
+          usersSeeded: seededUsers,
+          listingsSeeded: seededListings,
+        },
+        null,
+        2,
+      ),
+    );
+  });
 }
 
 main()
