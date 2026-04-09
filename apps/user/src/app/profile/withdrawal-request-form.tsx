@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BankInfoInput } from "@cashback/shared";
-import { formatCurrency } from "@cashback/shared";
+import { formatCurrency, type BankInfoInput } from "@cashback/shared/client";
 
 export function WithdrawalRequestForm({
   availableToWithdraw,

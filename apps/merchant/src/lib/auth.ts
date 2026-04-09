@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
+import authConfig from "@/lib/auth.config";
 
 function isValidPassword(password: string, passwordHash: string) {
   if (passwordHash.startsWith("$2")) {
@@ -12,33 +13,8 @@ function isValidPassword(password: string, passwordHash: string) {
   return Promise.resolve(legacyHash === passwordHash);
 }
 
-const authCookiePrefix = "cashback-merchant";
-const authCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/",
-  secure: process.env.NODE_ENV === "production",
-};
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret:
-    process.env.NEXTAUTH_SECRET ??
-    process.env.AUTH_SECRET ??
-    "dev-secret-not-for-production",
-  cookies: {
-    sessionToken: {
-      name: `${authCookiePrefix}.session-token`,
-      options: authCookieOptions,
-    },
-    callbackUrl: {
-      name: `${authCookiePrefix}.callback-url`,
-      options: authCookieOptions,
-    },
-    csrfToken: {
-      name: `${authCookiePrefix}.csrf-token`,
-      options: authCookieOptions,
-    },
-  },
+  ...authConfig,
   providers: [
     Credentials({
       name: "Merchant Login",
@@ -69,21 +45,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  pages: { signIn: "/login" },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.merchantId = user.id;
-        token.merchantName = user.name;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).id = token.merchantId;
-        (session.user as any).merchantName = token.merchantName;
-      }
-      return session;
-    },
-  },
 });

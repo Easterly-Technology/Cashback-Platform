@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BankInfoInput } from "@cashback/shared";
+import type { BankInfoInput } from "@cashback/shared/client";
 
 export function BankInfoForm({
   initialBankInfo,

@@ -1,6 +1,5 @@
 export * from "./utils/token-math";
 export * from "./utils/token-config";
-export * from "./utils/logger";
 export * from "./schemas/user";
 export * from "./schemas/merchant";
 export * from "./schemas/transaction";

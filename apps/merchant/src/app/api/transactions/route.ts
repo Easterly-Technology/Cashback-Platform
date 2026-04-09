@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@cashback/database";
 import { writeAuditLog } from "@cashback/database/src/audit";
 import { createTransactionSchema } from "@cashback/shared";
-import { signQrPayload, buildQrUrl } from "@cashback/shared/src/server";
+import { signQrPayload, buildQrUrl } from "@cashback/shared/server";
 import { randomUUID } from "node:crypto";
 import { auth } from "@/lib/auth";
 
