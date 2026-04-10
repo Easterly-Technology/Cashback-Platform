@@ -1,7 +1,16 @@
+import Link from "next/link";
 import { prisma } from "@cashback/database";
+import { PaginationControls } from "@/components/pagination-controls";
 import AuditLogFilters from "./audit-log-filters";
 
 export const dynamic = "force-dynamic";
+
+const VIEW_OPTIONS = [
+  { label: "All Activity", value: "all" },
+  { label: "Admin Changes", value: "admin" },
+  { label: "Finance", value: "finance" },
+  { label: "Automation", value: "automation" },
+] as const;
 
 function formatDateTime(value: Date) {
   return value.toLocaleString();
@@ -13,18 +22,30 @@ function formatJson(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
-export default async function AuditLogPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    actorType?: string;
-    action?: string;
-    resourceType?: string;
-    query?: string;
-  }>;
+function buildAuditWhere(params: {
+  actorType?: string;
+  action?: string;
+  resourceType?: string;
+  query?: string;
+  view?: string;
 }) {
-  const params = await searchParams;
   const where: Record<string, unknown> = {};
+
+  if (params.view === "admin" && !params.actorType) {
+    where.actorType = "ADMIN";
+  }
+
+  if (params.view === "finance" && !params.resourceType) {
+    where.resourceType = { in: ["WITHDRAWAL_REQUEST", "SETTLEMENT"] };
+  }
+
+  if (params.view === "automation" && !params.resourceType && !params.action) {
+    where.OR = [
+      { action: { contains: "JOB" } },
+      { action: { contains: "CRON" } },
+      { resourceType: "SYSTEM_JOB" },
+    ];
+  }
 
   if (params.actorType && params.actorType !== "all") {
     where.actorType = params.actorType;
@@ -44,12 +65,34 @@ export default async function AuditLogPage({
     ];
   }
 
-  const [logs, resourceTypes] = await Promise.all([
+  return where;
+}
+
+export default async function AuditLogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    actorType?: string;
+    action?: string;
+    resourceType?: string;
+    query?: string;
+    view?: string;
+    page?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(Number(params.page ?? "1") || 1, 1);
+  const pageSize = 25;
+  const where = buildAuditWhere(params);
+
+  const [logs, totalCount, resourceTypes] = await Promise.all([
     prisma.auditLog.findMany({
       where,
-      take: 50,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       orderBy: { createdAt: "desc" },
     }),
+    prisma.auditLog.count({ where }),
     prisma.auditLog.findMany({
       distinct: ["resourceType"],
       select: { resourceType: true },
@@ -191,19 +234,67 @@ export default async function AuditLogPage({
     resourceLabels.set(`TRANSACTION_QR:${transaction.id}`, label);
   });
 
+  const baseParams = {
+    actorType: params.actorType,
+    action: params.action,
+    resourceType: params.resourceType,
+    query: params.query,
+    view: params.view,
+  };
+
+  const exportParams = new URLSearchParams();
+  Object.entries(baseParams).forEach(([key, value]) => {
+    if (value) exportParams.set(key, value);
+  });
+
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
             Audit Log
           </h1>
           <p className="text-sm text-slate-500">
-            Review actor, action, resource, and payload details across recent platform activity.
+            Review actor, action, resource, payload details, and saved activity views across recent platform operations.
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          Showing the latest {logs.length} entries
+        <div className="flex flex-wrap gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+            Showing {logs.length} of {totalCount.toLocaleString()} entries
+          </div>
+          <Link
+            href={`/api/admin/audit-log/export${exportParams.toString() ? `?${exportParams.toString()}` : ""}`}
+            className="material-button-outlined px-4 py-2 text-sm font-semibold text-slate-700"
+          >
+            Export CSV
+          </Link>
+        </div>
+      </div>
+
+      <div className="material-card p-5">
+        <div className="flex flex-wrap gap-2">
+          {VIEW_OPTIONS.map((option) => {
+            const active = (params.view ?? "all") === option.value;
+            const href = new URLSearchParams();
+
+            if (option.value !== "all") {
+              href.set("view", option.value);
+            }
+
+            return (
+              <Link
+                key={option.value}
+                href={href.toString() ? `/audit-log?${href.toString()}` : "/audit-log"}
+                className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {option.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -222,7 +313,7 @@ export default async function AuditLogPage({
               No audit logs match these filters.
             </p>
             <p className="mt-2 text-sm text-slate-500">
-              Try widening the actor or resource filters to bring older records back into view.
+              Try widening the actor, resource, or view filters to bring older records back into view.
             </p>
           </div>
         ) : (
@@ -265,14 +356,14 @@ export default async function AuditLogPage({
                     {log.resourceId
                       ? resourceLabels.get(`${log.resourceType}:${log.resourceId}`) ??
                         log.resourceId
-                      : "No resource id"}
+                      : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Payload
+                    Details
                   </p>
-                  <pre className="mt-2 overflow-x-auto rounded-2xl bg-slate-950 p-3 text-xs text-slate-200">
+                  <pre className="mt-2 overflow-x-auto rounded-2xl bg-slate-950 p-3 text-xs leading-5 text-slate-100">
                     {formatJson(log.details)}
                   </pre>
                 </div>
@@ -287,8 +378,8 @@ export default async function AuditLogPage({
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
-                  <th className="p-4">Timestamp</th>
+                <tr className="border-b bg-slate-50 text-left text-slate-500">
+                  <th className="p-4">Created</th>
                   <th className="p-4">Actor</th>
                   <th className="p-4">Action</th>
                   <th className="p-4">Resource</th>
@@ -297,48 +388,33 @@ export default async function AuditLogPage({
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <tr
-                    key={String(log.id)}
-                    className="border-b border-slate-100 align-top hover:bg-slate-50/80"
-                  >
-                    <td className="p-4 font-mono text-xs text-slate-500">
+                  <tr key={String(log.id)} className="border-b border-slate-100 align-top">
+                    <td className="p-4 text-xs text-slate-500">
                       {formatDateTime(log.createdAt)}
                     </td>
                     <td className="p-4">
-                      <div className="space-y-1">
-                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                          {log.actorType}
-                        </span>
-                        <p className="font-medium text-slate-900">
-                          {actorLabels.get(`${log.actorType}:${log.actorId}`) ??
-                            log.actorId}
-                        </p>
-                        <p className="font-mono text-xs text-slate-400">
-                          {log.actorId}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4 font-mono text-xs text-slate-800">
-                      {log.action}
-                    </td>
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                          {log.resourceType}
-                        </span>
-                        <p className="font-medium text-slate-900">
-                          {log.resourceId
-                            ? resourceLabels.get(`${log.resourceType}:${log.resourceId}`) ??
-                              log.resourceId
-                            : "No resource id"}
-                        </p>
-                        <p className="font-mono text-xs text-slate-400">
-                          {log.resourceId ?? "—"}
-                        </p>
+                      <div className="font-medium text-slate-900">{log.actorType}</div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {actorLabels.get(`${log.actorType}:${log.actorId}`) ??
+                          log.actorId}
                       </div>
                     </td>
                     <td className="p-4">
-                      <pre className="max-w-xl overflow-x-auto rounded-2xl bg-slate-950 p-3 text-xs text-slate-200">
+                      <div className="font-semibold text-slate-900">{log.action}</div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-medium text-slate-900">
+                        {log.resourceType}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {log.resourceId
+                          ? resourceLabels.get(`${log.resourceType}:${log.resourceId}`) ??
+                            log.resourceId
+                          : "—"}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <pre className="max-w-xl overflow-x-auto rounded-2xl bg-slate-950 p-3 text-xs leading-5 text-slate-100">
                         {formatJson(log.details)}
                       </pre>
                     </td>
@@ -349,6 +425,14 @@ export default async function AuditLogPage({
           </div>
         </div>
       ) : null}
+
+      <PaginationControls
+        pathname="/audit-log"
+        params={baseParams}
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+      />
     </div>
   );
 }

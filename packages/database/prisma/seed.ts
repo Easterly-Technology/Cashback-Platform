@@ -219,6 +219,30 @@ async function main() {
     }
     console.log(`Platform settings: ${settings.length} created`);
 
+    await prisma.announcement.upsert({
+      where: { id: "0f4a1b6e-35f9-4a62-8f64-5a6b560f7c2a" },
+      update: {
+        title: "Welcome to the Cashback Platform",
+        body:
+          "The admin team can now publish updates directly to your in-app news feed. Watch this space for maintenance notices, reward changes, and platform announcements.",
+        status: "PUBLISHED",
+        audience: "ALL_USERS",
+        publishedAt: new Date(),
+        createdBy: admin.id,
+      },
+      create: {
+        id: "0f4a1b6e-35f9-4a62-8f64-5a6b560f7c2a",
+        title: "Welcome to the Cashback Platform",
+        body:
+          "The admin team can now publish updates directly to your in-app news feed. Watch this space for maintenance notices, reward changes, and platform announcements.",
+        status: "PUBLISHED",
+        audience: "ALL_USERS",
+        publishedAt: new Date(),
+        createdBy: admin.id,
+      },
+    });
+    console.log("Announcements: sample broadcast ensured");
+
     console.log("Seeding complete!");
   });
 }

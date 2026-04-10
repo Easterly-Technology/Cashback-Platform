@@ -1,33 +1,83 @@
+import Link from "next/link";
 import { prisma } from "@cashback/database";
 import { formatCurrency, parseBankInfo } from "@cashback/shared";
-import { WithdrawalStatusActions } from "./withdrawal-status-actions";
+import { PaginationControls } from "@/components/pagination-controls";
+import WithdrawalQueueManager from "./withdrawal-queue-manager";
 
 export const dynamic = "force-dynamic";
 
-function statusClass(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "status-badge status-badge-success";
-    case "APPROVED":
-      return "status-badge status-badge-info";
-    case "REJECTED":
-      return "status-badge status-badge-danger";
-    default:
-      return "status-badge status-badge-warning";
+const VIEW_OPTIONS = [
+  { label: "Needs Review", value: "needs-review" },
+  { label: "Stale", value: "stale" },
+  { label: "Approved", value: "approved" },
+  { label: "Completed", value: "completed" },
+  { label: "All", value: "all" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { label: "All statuses", value: "all" },
+  { label: "Pending", value: "PENDING" },
+  { label: "Approved", value: "APPROVED" },
+  { label: "Completed", value: "COMPLETED" },
+  { label: "Rejected", value: "REJECTED" },
+] as const;
+
+function buildWhere(selectedStatus?: string, selectedView?: string) {
+  const where: Record<string, unknown> = {};
+
+  if (selectedStatus && selectedStatus !== "all") {
+    where.status = selectedStatus;
+    return where;
   }
+
+  switch (selectedView) {
+    case "needs-review":
+      where.status = "PENDING";
+      break;
+    case "approved":
+      where.status = "APPROVED";
+      break;
+    case "completed":
+      where.status = "COMPLETED";
+      break;
+    case "stale":
+      where.status = "PENDING";
+      where.createdAt = {
+        lt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      };
+      break;
+    default:
+      break;
+  }
+
+  return where;
 }
 
-export default async function WithdrawalsPage() {
+export default async function WithdrawalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; view?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const selectedView = params.view ?? "needs-review";
+  const selectedStatus = params.status ?? "all";
+  const page = Math.max(Number(params.page ?? "1") || 1, 1);
+  const pageSize = 20;
+  const where = buildWhere(selectedStatus, selectedView);
+
   const [
     requests,
+    totalCount,
     pendingAggregate,
     approvedAggregate,
     completedAggregate,
     rejectedAggregate,
   ] = await Promise.all([
     prisma.withdrawalRequest.findMany({
+      where,
       orderBy: { createdAt: "desc" },
-      take: 50,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         user: {
           select: {
@@ -38,6 +88,7 @@ export default async function WithdrawalsPage() {
         },
       },
     }),
+    prisma.withdrawalRequest.count({ where }),
     prisma.withdrawalRequest.aggregate({
       where: { status: "PENDING" },
       _count: true,
@@ -87,13 +138,18 @@ export default async function WithdrawalsPage() {
     },
   ];
 
+  const baseParams = {
+    status: selectedStatus === "all" ? undefined : selectedStatus,
+    view: selectedView === "all" ? undefined : selectedView,
+  };
+
   return (
     <div className="space-y-6">
       <div className="material-card p-6">
         <span className="material-chip">Payout Operations</span>
         <h1 className="material-title mt-4 text-slate-950">Withdrawals</h1>
         <p className="material-subtitle mt-3 max-w-2xl">
-          Review withdrawal requests, verify payout details, and move each request through approval and completion states.
+          Review withdrawal requests, verify payout details, work through saved queue presets, and apply bulk payout decisions.
         </p>
       </div>
 
@@ -111,160 +167,121 @@ export default async function WithdrawalsPage() {
         ))}
       </div>
 
+      <div className="material-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {VIEW_OPTIONS.map((option) => {
+              const active = selectedView === option.value;
+              const href = new URLSearchParams();
+
+              if (option.value !== "all") {
+                href.set("view", option.value);
+              }
+              if (selectedStatus !== "all") {
+                href.set("status", selectedStatus);
+              }
+
+              return (
+                <Link
+                  key={option.value}
+                  href={href.toString() ? `/withdrawals?${href.toString()}` : "/withdrawals"}
+                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                    active
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_OPTIONS.map((option) => {
+              const active = selectedStatus === option.value;
+              const href = new URLSearchParams();
+
+              if (selectedView !== "all") {
+                href.set("view", selectedView);
+              }
+              if (option.value !== "all") {
+                href.set("status", option.value);
+              }
+
+              return (
+                <Link
+                  key={option.value}
+                  href={href.toString() ? `/withdrawals?${href.toString()}` : "/withdrawals"}
+                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                    active
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              );
+            })}
+            <Link
+              href={`/api/admin/withdrawals/export${
+                (() => {
+                  const href = new URLSearchParams();
+                  if (selectedView !== "all") href.set("view", selectedView);
+                  if (selectedStatus !== "all") href.set("status", selectedStatus);
+                  const query = href.toString();
+                  return query ? `?${query}` : "";
+                })()
+              }`}
+              className="material-button-outlined px-4 py-2 text-sm font-semibold text-slate-700"
+            >
+              Export CSV
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <div className="material-card p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Withdrawal Queue</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Requests include the user&apos;s saved payout details and the current processing state.
+              Requests include the user&apos;s saved payout details and can be processed individually or in bulk.
             </p>
           </div>
           <span className="material-chip material-chip-muted">
-            {requests.length.toLocaleString()} requests
+            {totalCount.toLocaleString()} requests
           </span>
         </div>
 
-        {requests.length === 0 ? (
-          <div className="material-empty px-6 py-10 text-center">
-            <p className="text-base font-medium text-slate-700">
-              No withdrawal requests yet.
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              When users request a cash payout, the queue will appear here automatically.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-3 xl:hidden">
-              {requests.map((request) => {
-                const bankInfo = parseBankInfo(request.user.bankInfo);
+        <WithdrawalQueueManager
+          requests={requests.map((requestEntry) => {
+            const bankInfo = parseBankInfo(requestEntry.user.bankInfo);
 
-                return (
-                  <div key={request.id} className="material-card-flat p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-slate-900">{request.user.name}</p>
-                        <p className="text-sm text-slate-500">{request.user.email}</p>
-                      </div>
-                      <span className={statusClass(request.status)}>{request.status}</span>
-                    </div>
-                    <div className="mt-4 grid gap-3 text-sm">
-                      <div className="rounded-2xl bg-slate-50 p-3">
-                        <p className="text-slate-500">Amount</p>
-                        <p className="mt-1 font-semibold text-slate-950">
-                          {formatCurrency(Number(request.amount))}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-3">
-                        <p className="text-slate-500">Payout Details</p>
-                        {bankInfo ? (
-                          <>
-                            <p className="mt-1 font-semibold text-slate-900">
-                              {bankInfo.accountHolderName}
-                            </p>
-                            <p className="mt-1 text-slate-600">{bankInfo.bankName}</p>
-                            <p className="mt-1 font-mono text-xs text-slate-500">
-                              {bankInfo.accountNumber}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="mt-1 text-slate-400">No payout details saved</p>
-                        )}
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-3">
-                        <p className="text-slate-500">Timeline</p>
-                        <p className="mt-1 text-slate-900">
-                          Requested {request.createdAt.toLocaleString()}
-                        </p>
-                        <p className="mt-1 text-slate-500">
-                          {request.processedAt
-                            ? `Updated ${request.processedAt.toLocaleString()}`
-                            : "Awaiting admin action"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <WithdrawalStatusActions
-                        id={request.id}
-                        status={request.status}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="material-table-shell hidden xl:block">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-slate-500">
-                      <th className="p-4">Requester</th>
-                      <th className="p-4">Amount</th>
-                      <th className="p-4">Payout Details</th>
-                      <th className="p-4">Requested</th>
-                      <th className="p-4">Processed</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requests.map((request) => {
-                      const bankInfo = parseBankInfo(request.user.bankInfo);
-
-                      return (
-                        <tr key={request.id} className="border-b border-slate-100 align-top">
-                          <td className="p-4">
-                            <p className="font-medium text-slate-900">{request.user.name}</p>
-                            <p className="text-xs text-slate-500">{request.user.email}</p>
-                          </td>
-                          <td className="p-4 font-medium text-slate-950">
-                            {formatCurrency(Number(request.amount))}
-                          </td>
-                          <td className="p-4">
-                            {bankInfo ? (
-                              <div className="space-y-1">
-                                <p className="font-medium text-slate-900">
-                                  {bankInfo.accountHolderName}
-                                </p>
-                                <p className="text-xs text-slate-500">{bankInfo.bankName}</p>
-                                <p className="font-mono text-xs text-slate-400">
-                                  {bankInfo.accountNumber}
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-400">
-                                No payout details saved
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-4 text-slate-500">
-                            {request.createdAt.toLocaleString()}
-                          </td>
-                          <td className="p-4 text-slate-500">
-                            {request.processedAt
-                              ? request.processedAt.toLocaleString()
-                              : "Awaiting action"}
-                          </td>
-                          <td className="p-4">
-                            <span className={statusClass(request.status)}>{request.status}</span>
-                          </td>
-                          <td className="p-4">
-                            <WithdrawalStatusActions
-                              id={request.id}
-                              status={request.status}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
+            return {
+              id: requestEntry.id,
+              amount: Number(requestEntry.amount),
+              status: requestEntry.status,
+              processedAt: requestEntry.processedAt?.toISOString() ?? null,
+              createdAt: requestEntry.createdAt.toISOString(),
+              user: {
+                name: requestEntry.user.name,
+                email: requestEntry.user.email,
+                payoutLabel: bankInfo?.accountHolderName ?? null,
+                payoutSubLabel: bankInfo?.bankName ?? null,
+                payoutAccount: bankInfo?.accountNumber ?? null,
+              },
+            };
+          })}
+        />
       </div>
+
+      <PaginationControls
+        pathname="/withdrawals"
+        params={baseParams}
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+      />
     </div>
   );
 }

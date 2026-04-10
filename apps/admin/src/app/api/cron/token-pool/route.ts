@@ -1,9 +1,4 @@
-import { prisma } from "@cashback/database";
-import { calculateTokenPoolValue } from "@cashback/shared";
-
-function getDateOnly(date: Date) {
-  return new Date(date.toISOString().split("T")[0]);
-}
+import { runTrackedJob } from "@/lib/admin-jobs";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -11,38 +6,21 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const startOfDay = getDateOnly(yesterday);
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  try {
+    const result = await runTrackedJob("token-pool");
 
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      status: "CONFIRMED",
-      createdAt: { gte: startOfDay, lt: endOfDay },
-    },
-    include: { merchant: { select: { rebatePct: true } } },
-  });
-
-  const totalSpending = transactions.reduce(
-    (sum, tx) => sum + Number(tx.totalAmount),
-    0,
-  );
-  const poolValue = calculateTokenPoolValue(
-    transactions.map((tx) => ({
-      totalAmount: tx.totalAmount.toString(),
-      rebatePct: tx.merchant.rebatePct.toString(),
-    })),
-  ).toNumber();
-
-  const poolDate = getDateOnly(startOfDay);
-
-  await prisma.dailyTokenPool.upsert({
-    where: { poolDate },
-    update: { totalSpending, poolValue },
-    create: { poolDate, totalSpending, poolValue },
-  });
-
-  return Response.json({ success: true, poolDate: poolDate.toISOString(), totalSpending, poolValue });
+    return Response.json({
+      success: true,
+      runId: result.runId,
+      ...result.summary,
+    });
+  } catch (error) {
+    console.error("[CRON] token-pool failed:", error);
+    return Response.json(
+      {
+        error: error instanceof Error ? error.message : "Job failed",
+      },
+      { status: 500 },
+    );
+  }
 }

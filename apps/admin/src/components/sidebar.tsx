@@ -5,22 +5,27 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
+  { href: "/ops", label: "Operations Inbox" },
   { href: "/merchants", label: "Merchants" },
+  { href: "/settlements", label: "Settlements" },
   { href: "/users", label: "Users" },
   { href: "/transactions", label: "Transactions" },
   { href: "/withdrawals", label: "Withdrawals" },
   { href: "/tokens", label: "Tokens" },
   { href: "/marketplace", label: "Exchange" },
+  { href: "/announcements", label: "Announcements", minRole: "SUPER_ADMIN" },
   { href: "/audit-log", label: "Audit Log" },
-  { href: "/settings", label: "Settings" },
+  { href: "/settings", label: "Settings", minRole: "SUPER_ADMIN" },
 ];
 
 export function Sidebar({
   open,
   onClose,
+  userRole,
 }: {
   open: boolean;
   onClose: () => void;
+  userRole?: string | null;
 }) {
   const pathname = usePathname();
 
@@ -28,7 +33,11 @@ export function Sidebar({
     return null;
   }
 
-  const navLinks = navItems.map((item) => {
+  const visibleNavItems = navItems.filter(
+    (item) => !item.minRole || item.minRole === userRole,
+  );
+
+  const navLinks = visibleNavItems.map((item) => {
     const isActive =
       item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 

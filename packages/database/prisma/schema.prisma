@@ -73,6 +73,10 @@ model Admin {
   role         AdminRole @default(ADMIN)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  announcements Announcement[]
+  jobRuns       SystemJobRun[] @relation("SystemJobRunActor")
+  notes         AdminNote[]    @relation("AdminNoteAuthor")
+
   @@map("admins")
 }
 
@@ -299,6 +303,7 @@ model MerchantSettlement {
   totalServiceFee Decimal  @map("total_service_fee") @db.Decimal(18, 4)
   totalOwed       Decimal  @map("total_owed") @db.Decimal(18, 4)
   status          SettlementStatus @default(PENDING)
+  invoiceReference String? @map("invoice_reference") @db.VarChar(120)
   paidAt          DateTime? @map("paid_at") @db.Timestamptz
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
 
@@ -373,4 +378,80 @@ model PlatformSetting {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("platform_settings")
+}
+
+model AdminNote {
+  id           String   @id @default(uuid()) @db.Uuid
+  resourceType String   @map("resource_type") @db.VarChar(50)
+  resourceId   String   @map("resource_id") @db.Uuid
+  body         String   @db.Text
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  author Admin @relation("AdminNoteAuthor", fields: [createdBy], references: [id])
+
+  @@index([resourceType, resourceId, createdAt])
+  @@index([createdBy, createdAt])
+  @@map("admin_notes")
+}
+
+model SystemJobRun {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobName     String   @map("job_name") @db.VarChar(80)
+  status      SystemJobRunStatus @default(RUNNING)
+  summary     Json?
+  error       String?  @db.Text
+  startedAt   DateTime @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz
+  triggeredBy String?  @map("triggered_by") @db.Uuid
+
+  actor Admin? @relation("SystemJobRunActor", fields: [triggeredBy], references: [id])
+
+  @@index([jobName, startedAt])
+  @@index([status, startedAt])
+  @@map("system_job_runs")
+}
+
+enum SystemJobRunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+
+  @@map("system_job_run_status")
+}
+
+model Announcement {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(160)
+  body        String   @db.Text
+  status      AnnouncementStatus @default(DRAFT)
+  audience    AnnouncementAudience @default(ALL_USERS)
+  isPinned    Boolean  @default(false) @map("is_pinned")
+  createdBy   String?  @map("created_by") @db.Uuid
+  publishedAt DateTime? @map("published_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  admin Admin? @relation(fields: [createdBy], references: [id])
+
+  @@index([status, publishedAt])
+  @@index([audience, status])
+  @@map("announcements")
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("announcement_status")
+}
+
+enum AnnouncementAudience {
+  ALL_USERS
+  ACTIVE_USERS
+  MERCHANTS
+
+  @@map("announcement_audience")
 }

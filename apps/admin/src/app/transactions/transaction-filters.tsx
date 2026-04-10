@@ -4,22 +4,28 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function TransactionFilters({
+  currentView,
   currentStatus,
   currentFrom,
   currentTo,
 }: {
+  currentView?: string;
   currentStatus?: string;
   currentFrom?: string;
   currentTo?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [view, setView] = useState(currentView ?? "all");
   const [status, setStatus] = useState(currentStatus ?? "all");
   const [from, setFrom] = useState(currentFrom ?? "");
   const [to, setTo] = useState(currentTo ?? "");
 
   function applyFilters() {
     const params = new URLSearchParams(searchParams.toString());
+
+    if (view !== "all") params.set("view", view);
+    else params.delete("view");
 
     if (status !== "all") params.set("status", status);
     else params.delete("status");
@@ -37,6 +43,7 @@ export default function TransactionFilters({
     setStatus("all");
     setFrom("");
     setTo("");
+    setView("all");
     router.push("/transactions");
   }
 
@@ -52,7 +59,17 @@ export default function TransactionFilters({
           Clear
         </button>
       </div>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
+        <select
+          className="px-3 py-2 text-sm"
+          value={view}
+          onChange={(e) => setView(e.target.value)}
+        >
+          <option value="all">All Views</option>
+          <option value="pending-review">Pending Review</option>
+          <option value="disputes">Disputes</option>
+          <option value="today">Today</option>
+        </select>
         <select
           className="px-3 py-2 text-sm"
           value={status}

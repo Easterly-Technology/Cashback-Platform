@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 
@@ -61,6 +61,10 @@ function BellIcon({ className }: { className?: string }) {
 /* ── title map ───────────────────────────────────────────── */
 
 const titleMap: [string, string][] = [
+  ["/search", "Search"],
+  ["/announcements", "Announcements"],
+  ["/settlements", "Settlements"],
+  ["/ops", "Operations Inbox"],
   ["/withdrawals", "Withdrawals"],
   ["/transactions", "Transactions"],
   ["/marketplace", "Exchange"],
@@ -116,6 +120,7 @@ export function TopBar({
   onMenuToggle: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +128,7 @@ export function TopBar({
   const userName = user?.name?.trim() || "Admin";
   const userEmail = user?.email?.trim() || "";
   const userRole = user?.role?.trim() || "admin";
+  const currentSearch = searchParams.get("q") ?? "";
 
   // close dropdown on outside click
   useEffect(() => {
@@ -175,14 +181,28 @@ export function TopBar({
 
         {/* right actions */}
         <div className="flex items-center gap-1.5">
-          {/* search */}
-          <button
-            type="button"
-            className="hidden h-9 w-9 items-center justify-center rounded-[14px] text-slate-500 transition hover:bg-indigo-50 hover:text-slate-700 sm:flex"
+          <form
+            action="/search"
+            method="get"
+            className="hidden items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 py-1.5 sm:flex"
+          >
+            <SearchIcon className="h-[18px] w-[18px] text-slate-400" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={currentSearch}
+              placeholder="Search users, merchants, transactions..."
+              className="w-56 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </form>
+
+          <Link
+            href="/search"
+            className="flex h-9 w-9 items-center justify-center rounded-[14px] text-slate-500 transition hover:bg-indigo-50 hover:text-slate-700 sm:hidden"
             aria-label="Search"
           >
             <SearchIcon className="h-[18px] w-[18px]" />
-          </button>
+          </Link>
 
           {/* bell */}
           <button

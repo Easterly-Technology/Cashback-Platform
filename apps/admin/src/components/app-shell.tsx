@@ -22,7 +22,11 @@ export default function AppShell({
         user={initialUser ?? null}
         onMenuToggle={() => setSidebarOpen((v) => !v)}
       />
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        userRole={initialUser?.role ?? null}
+      />
       <main
         className={
           isAuthPage

@@ -6,5 +6,6 @@ export * from "./schemas/transaction";
 export * from "./schemas/token";
 export * from "./schemas/marketplace";
 export * from "./schemas/withdrawal";
+export * from "./schemas/admin";
 export * from "./utils/format";
 export * from "./constants";

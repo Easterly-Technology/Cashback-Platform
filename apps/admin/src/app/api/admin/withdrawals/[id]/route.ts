@@ -1,7 +1,7 @@
 import { prisma } from "@cashback/database";
 import { writeAuditLog } from "@cashback/database/src/audit";
 import { withdrawalStatusUpdateSchema } from "@cashback/shared";
-import { auth } from "@/lib/auth";
+import { requireAdminSession } from "@/lib/admin-session";
 
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["APPROVED", "REJECTED"],
@@ -12,14 +12,13 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await requireAdminSession();
+
+  if (!session.ok) {
+    return session.response;
+  }
+
   try {
-    const session = await auth();
-    const adminId = (session?.user as { id?: string } | undefined)?.id;
-
-    if (!adminId) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id } = await params;
     const body = await request.json();
     const parsed = withdrawalStatusUpdateSchema.safeParse(body);
@@ -65,7 +64,7 @@ export async function PATCH(
 
     await writeAuditLog(prisma, {
       actorType: "ADMIN",
-      actorId: adminId,
+      actorId: session.admin.id,
       action: "UPDATE_WITHDRAWAL_STATUS",
       resourceType: "WITHDRAWAL_REQUEST",
       resourceId: updated.id,
