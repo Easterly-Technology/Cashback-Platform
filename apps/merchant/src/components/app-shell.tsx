@@ -17,7 +17,7 @@ export default function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <>
+    <div className="merchant-shell">
       <TopBar
         user={initialUser ?? null}
         onMenuToggle={() => setSidebarOpen((v) => !v)}
@@ -27,11 +27,11 @@ export default function AppShell({
         className={
           isAuthPage
             ? "mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12"
-            : "min-h-screen px-4 pb-10 pt-20 sm:px-6 lg:ml-72 lg:px-10 lg:pt-20"
+            : "mx-auto min-h-screen max-w-[1600px] px-4 pb-12 pt-24 sm:px-6 lg:ml-72 lg:px-8 lg:pt-24 xl:px-10"
         }
       >
         {children}
       </main>
-    </>
+    </div>
   );
 }

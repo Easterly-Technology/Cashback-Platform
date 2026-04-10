@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { formatCurrency } from "@cashback/shared";
 
 interface Product {
   id: string;
@@ -26,6 +27,13 @@ interface GeneratedQr {
   rebateAmount: number;
   serviceFee: number;
   expiresAt: string;
+  items: {
+    productId: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }[];
 }
 
 export default function QrCodesPage() {
@@ -36,13 +44,24 @@ export default function QrCodesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function loadProducts() {
-      const res = await fetch("/api/products", { cache: "no-store" });
-      const data = await res.json();
-      setProducts(data.filter((product: Product) => (product.inventory?.quantity ?? 0) > 0));
-      setLoading(false);
+      try {
+        const res = await fetch("/api/products", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Failed to load products");
+        }
+        const data = (await res.json()) as Product[];
+        setProducts(data.filter((product) => (product.inventory?.quantity ?? 0) > 0));
+      } catch (loadError) {
+        console.error(loadError);
+        setError("Failed to load products");
+      } finally {
+        setLoading(false);
+      }
     }
 
     void loadProducts();
@@ -56,7 +75,7 @@ export default function QrCodesPage() {
       }
 
       const dataUrl = await QRCode.toDataURL(generated.qrUrl, {
-        width: 240,
+        width: 280,
         margin: 1,
       });
       setQrImage(dataUrl);
@@ -65,19 +84,48 @@ export default function QrCodesPage() {
     void generateImage();
   }, [generated]);
 
+  const availableStockByProduct = useMemo(
+    () =>
+      new Map(
+        products.map((product) => [product.id, product.inventory?.quantity ?? 0]),
+      ),
+    [products],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return products;
+    }
+
+    return products.filter((product) => product.name.toLowerCase().includes(query));
+  }, [products, search]);
+
+  const itemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cart],
   );
 
-  function addToCart(product: Product) {
+  function resetGenerated() {
     setGenerated(null);
+    setCopied(false);
+  }
+
+  function addToCart(product: Product) {
+    resetGenerated();
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       const quantityInCart = existing?.quantity ?? 0;
       const available = product.inventory?.quantity ?? 0;
 
-      if (quantityInCart >= available) return prev;
+      if (quantityInCart >= available) {
+        return prev;
+      }
 
       if (existing) {
         return prev.map((item) =>
@@ -100,15 +148,19 @@ export default function QrCodesPage() {
   }
 
   function updateQuantity(productId: string, nextQuantity: number) {
-    setGenerated(null);
-    if (nextQuantity <= 0) {
+    resetGenerated();
+
+    const max = availableStockByProduct.get(productId) ?? 0;
+    const safeQuantity = Math.min(Math.max(nextQuantity, 0), max);
+
+    if (safeQuantity <= 0) {
       setCart((prev) => prev.filter((item) => item.productId !== productId));
       return;
     }
 
     setCart((prev) =>
       prev.map((item) =>
-        item.productId === productId ? { ...item, quantity: nextQuantity } : item,
+        item.productId === productId ? { ...item, quantity: safeQuantity } : item,
       ),
     );
   }
@@ -116,166 +168,370 @@ export default function QrCodesPage() {
   async function handleGenerate() {
     setSubmitting(true);
     setError("");
+    setCopied(false);
 
-    const res = await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: cart.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
-      }),
-    });
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        }),
+      });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        throw new Error("Failed to generate QR code");
+      }
+
+      const data = (await res.json()) as GeneratedQr;
+      setGenerated(data);
+    } catch (generateError) {
+      console.error(generateError);
       setError("Failed to generate QR code");
+    } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function copyQrUrl() {
+    if (!generated?.qrUrl || typeof navigator === "undefined") {
       return;
     }
 
-    const data = await res.json();
-    setGenerated(data);
-    setSubmitting(false);
+    await navigator.clipboard.writeText(generated.qrUrl);
+    setCopied(true);
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-          New Transaction
-        </h1>
-        <p className="text-sm text-slate-500">
-          Build a cart, generate a signed QR, and let the customer confirm it on their device.
-        </p>
+    <div className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
+        <div className="material-card p-6">
+          <span className="material-chip">Counter Checkout</span>
+          <h1 className="material-title mt-4 text-slate-950">New Transaction</h1>
+          <p className="material-subtitle mt-3">
+            Build a cart, generate a signed customer QR, and hand off confirmation without losing visibility on totals or fees.
+          </p>
+        </div>
+
+        <div className="material-card-flat p-5">
+          <p className="text-sm font-semibold text-slate-950">Checkout Snapshot</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="rounded-2xl bg-emerald-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                In-stock products
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                {products.length.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Cart items
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                {itemCount.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-950 p-4 text-white">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                Cart total
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight">
+                {formatCurrency(total)}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-          {error}
-        </p>
+        <div className="material-alert material-alert-danger text-sm">{error}</div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Select Products</h2>
-          <div className="space-y-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+        <section className="space-y-4">
+          <div className="material-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">Select Products</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Tap products to add them to the live cart.
+                </p>
+              </div>
+              <span className="material-chip material-chip-muted">
+                {filteredProducts.length.toLocaleString()} visible
+              </span>
+            </div>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search in-stock products..."
+              className="mt-4 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="space-y-3">
             {loading ? (
-              <p className="text-sm text-gray-400">Loading products...</p>
-            ) : products.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-emerald-200 bg-white px-6 py-10 text-center shadow-sm">
+              <div className="material-card px-6 py-12 text-center text-sm text-slate-400">
+                Loading products...
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="material-empty border-emerald-200 px-6 py-10 text-center">
                 <p className="text-base font-medium text-slate-700">
-                  No in-stock products available.
+                  {search.trim()
+                    ? "No products match this search."
+                    : "No in-stock products available."}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  Add stock in the products page before generating a new transaction QR.
+                  {search.trim()
+                    ? "Try another search term or clear the query to see the full in-stock list."
+                    : "Add stock in the products page before generating a new transaction QR."}
                 </p>
               </div>
             ) : (
-              products.map((product) => (
+              filteredProducts.map((product) => (
                 <button
                   key={product.id}
+                  type="button"
                   onClick={() => addToCart(product)}
-                  className="flex min-h-16 w-full items-center justify-between rounded-2xl border bg-white p-4 text-sm transition-colors hover:border-emerald-300"
+                  className="material-card-flat flex min-h-20 w-full items-center justify-between gap-4 p-4 text-left transition hover:-translate-y-0.5"
                 >
-                  <span className="text-left">
-                    <span className="font-medium block">{product.name}</span>
-                    <span className="text-xs text-gray-400">
+                  <span>
+                    <span className="block font-medium text-slate-900">
+                      {product.name}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-400">
                       Stock {product.inventory?.quantity ?? 0}
                     </span>
                   </span>
-                  <span className="text-gray-500">
-                    RM{Number(product.price).toFixed(2)}
+                  <span className="text-sm font-semibold text-slate-700">
+                    {formatCurrency(Number(product.price))}
                   </span>
                 </button>
               ))
             )}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Cart</h2>
-          {cart.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center shadow-sm">
-              <p className="text-base font-medium text-slate-700">
-                No items selected.
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Tap products on the left to build a cart and generate a signed QR.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-3xl border bg-white p-4 shadow-sm">
-              {cart.map((item) => (
-                <div
-                  key={item.productId}
-                  className="flex items-center justify-between gap-3 border-b py-3 last:border-0"
-                >
-                  <div>
-                    <span className="font-medium text-sm">{item.name}</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-medium"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs text-gray-500">× {item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-medium"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <span className="text-sm">
-                    RM{(item.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center pt-3 mt-2 border-t font-bold">
-                <span>Total</span>
-                <span>RM{total.toFixed(2)}</span>
+        <section className="space-y-4">
+          <div className="material-card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">Cart</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Adjust quantities, then generate a signed QR for the customer.
+                </p>
               </div>
-              <button
-                onClick={() => void handleGenerate()}
-                disabled={cart.length === 0 || submitting}
-                className="mt-4 min-h-11 w-full rounded-xl bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {submitting ? "Generating..." : "Generate QR Code"}
-              </button>
+              {cart.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCart([]);
+                    resetGenerated();
+                  }}
+                  className="text-sm font-semibold text-slate-500 hover:text-slate-900"
+                >
+                  Clear cart
+                </button>
+              ) : null}
             </div>
-          )}
+
+            {cart.length === 0 ? (
+              <div className="material-empty mt-4 px-6 py-10 text-center">
+                <p className="text-base font-medium text-slate-700">
+                  No items selected.
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Choose products from the left to build the next checkout.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 space-y-3">
+                  {cart.map((item) => {
+                    const max = availableStockByProduct.get(item.productId) ?? item.quantity;
+
+                    return (
+                      <div
+                        key={item.productId}
+                        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-slate-900">{item.name}</p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Max available: {max}
+                            </p>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-700">
+                            {formatCurrency(item.price * item.quantity)}
+                          </p>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-16 text-center text-sm font-medium text-slate-600">
+                            x {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Items
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {itemCount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Estimated rebate
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {generated
+                        ? formatCurrency(generated.rebateAmount)
+                        : "Calculated on QR"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Total
+                    </p>
+                    <p className="mt-2 text-lg font-semibold">
+                      {formatCurrency(total)}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handleGenerate()}
+                  disabled={cart.length === 0 || submitting}
+                  className="material-button-primary mt-4 min-h-11 w-full px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:opacity-50"
+                >
+                  {submitting ? "Generating..." : "Generate QR Code"}
+                </button>
+              </>
+            )}
+          </div>
 
           {generated ? (
-            <div className="mt-4 rounded-3xl border bg-white p-6 text-center shadow-sm">
-              {qrImage ? (
-                <img src={qrImage} alt="Transaction QR code" className="mx-auto" />
-              ) : (
-                <div className="w-48 h-48 bg-gray-100 mx-auto animate-pulse rounded-lg" />
-              )}
-              <p className="text-sm text-gray-700 mt-3 break-all">{generated.qrUrl}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Expires at {new Date(generated.expiresAt).toLocaleString()}
-              </p>
-              <div className="mt-4 grid gap-2 text-left text-sm sm:grid-cols-3">
-                <div className="rounded-lg bg-gray-50 p-3">
-                  <p className="text-gray-500">Total</p>
-                  <p className="font-semibold">RM{generated.totalAmount.toFixed(2)}</p>
+            <div className="material-card-flat p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">Ready to Scan</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Share this QR with the customer before it expires.
+                  </p>
                 </div>
-                <div className="rounded-lg bg-gray-50 p-3">
-                  <p className="text-gray-500">Rebate</p>
-                  <p className="font-semibold">RM{generated.rebateAmount.toFixed(2)}</p>
+                <span className="material-chip material-chip-muted">
+                  Expires {new Date(generated.expiresAt).toLocaleTimeString()}
+                </span>
+              </div>
+
+              <div className="mt-5 rounded-[28px] bg-white p-4 shadow-sm">
+                {qrImage ? (
+                  <img src={qrImage} alt="Transaction QR code" className="mx-auto" />
+                ) : (
+                  <div className="mx-auto h-[280px] w-[280px] animate-pulse rounded-2xl bg-slate-100" />
+                )}
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Share Link
+                </p>
+                <p className="mt-2 break-all text-sm text-slate-700">
+                  {generated.qrUrl}
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Total
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                    {formatCurrency(generated.totalAmount)}
+                  </p>
                 </div>
-                <div className="rounded-lg bg-gray-50 p-3">
-                  <p className="text-gray-500">Fee</p>
-                  <p className="font-semibold">RM{generated.serviceFee.toFixed(2)}</p>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Rebate
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                    {formatCurrency(generated.rebateAmount)}
+                  </p>
                 </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Service Fee
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                    {formatCurrency(generated.serviceFee)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-sm font-semibold text-slate-900">Checkout contents</p>
+                {generated.items.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="flex items-center justify-between gap-3 text-sm text-slate-600"
+                  >
+                    <span>
+                      {item.name} x {item.quantity}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {formatCurrency(item.lineTotal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void copyQrUrl()}
+                  className="material-button-primary min-h-11 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  {copied ? "Copied" : "Copy Link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCart([]);
+                    resetGenerated();
+                  }}
+                  className="material-button-outlined min-h-11 px-4 py-2 text-sm font-semibold text-slate-700"
+                >
+                  Start New Cart
+                </button>
               </div>
             </div>
           ) : null}
-        </div>
+        </section>
       </div>
     </div>
   );

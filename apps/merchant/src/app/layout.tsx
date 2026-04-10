@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import AppShell from "@/components/app-shell";
 import { auth } from "@/lib/auth";
 import "./globals.css";
@@ -7,6 +7,13 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-body",
+});
+
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -31,8 +38,10 @@ export default async function RootLayout({
     : null;
 
   return (
-    <html lang="zh-CN">
-      <body className={`${jakarta.className} text-slate-900 antialiased`}>
+    <html lang="en">
+      <body
+        className={`${jakarta.variable} ${display.variable} ${jakarta.className} text-slate-900 antialiased`}
+      >
         <AppShell initialUser={initialUser}>{children}</AppShell>
       </body>
     </html>
