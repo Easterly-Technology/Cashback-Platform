@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
-import AppShell from "@/components/app-shell";
-import { auth } from "@/lib/auth";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -26,23 +24,12 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  const initialUser = session?.user
-    ? {
-        name: session.user.name ?? null,
-        email: session.user.email ?? null,
-        merchantName:
-          (session.user as Record<string, unknown>).merchantName as string ??
-          null,
-      }
-    : null;
-
   return (
     <html lang="en">
       <body
         className={`${jakarta.variable} ${display.variable} ${jakarta.className} text-slate-900 antialiased`}
       >
-        <AppShell initialUser={initialUser}>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

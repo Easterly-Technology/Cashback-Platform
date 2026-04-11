@@ -4,6 +4,7 @@ import { writeAuditLog } from "@cashback/database/src/audit";
 import { createTransactionSchema } from "@cashback/shared";
 import { signQrPayload, buildQrUrl } from "@cashback/shared/server";
 import { randomUUID } from "node:crypto";
+import QRCode from "qrcode";
 import { auth } from "@/lib/auth";
 
 export async function GET() {
@@ -47,35 +48,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Merchant not found" }, { status: 404 });
     }
 
-    // Look up products and calculate totals
-    const items = [];
-    let totalAmount = 0;
-
-    for (const item of parsed.data.items) {
-      const product = await prisma.product.findFirst({
-        where: { id: item.productId, merchantId },
-        include: { inventory: true },
-      });
-
-      if (!product) {
-        return Response.json(
-          { error: `Product ${item.productId} not found` },
-          { status: 400 },
-        );
-      }
-
-      const lineTotal = Number(product.price) * item.quantity;
-      totalAmount += lineTotal;
-
-      items.push({
-        productId: product.id,
-        name: product.name,
-        quantity: item.quantity,
-        unitPrice: Number(product.price),
-        lineTotal,
-      });
-    }
-
+    const totalAmount = parsed.data.totalAmount;
     const rebateAmount = totalAmount * Number(merchant.rebatePct);
     const serviceFee = totalAmount * Number(merchant.serviceFeePct);
 
@@ -85,7 +58,6 @@ export async function POST(request: NextRequest) {
 
     const payload = {
       merchantId,
-      items,
       totalAmount,
       qrCodeId,
       expiresAt: expiresAt.toISOString(),
@@ -107,6 +79,10 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.USER_APP_URL ?? "http://localhost:3000";
     const qrUrl = buildQrUrl(baseUrl, qrCodeId, hmac);
+    const qrImageDataUrl = await QRCode.toDataURL(qrUrl, {
+      width: 280,
+      margin: 1,
+    });
 
     await writeAuditLog(prisma, {
       actorType: "MERCHANT",
@@ -116,7 +92,6 @@ export async function POST(request: NextRequest) {
       resourceId: qrCode.id,
       details: {
         totalAmount,
-        itemCount: items.length,
         expiresAt: expiresAt.toISOString(),
       },
       ipAddress: request.headers.get("x-forwarded-for") ?? undefined,
@@ -125,10 +100,10 @@ export async function POST(request: NextRequest) {
     return Response.json({
       qrCodeId: qrCode.id,
       qrUrl,
+      qrImageDataUrl,
       totalAmount,
       rebateAmount,
       serviceFee,
-      items,
       expiresAt: expiresAt.toISOString(),
     });
   } catch (error) {

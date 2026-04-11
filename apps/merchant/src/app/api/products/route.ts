@@ -7,21 +7,16 @@ import {
   updateProductSchema,
 } from "@cashback/shared";
 import { auth } from "@/lib/auth";
+import { getMerchantProductsUncached } from "@/lib/products";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await auth();
   const merchantId = (session?.user as { id?: string } | undefined)?.id;
   if (!merchantId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const products = await prisma.product.findMany({
-    where: { merchantId },
-    include: { inventory: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return Response.json(products);
+  return Response.json(await getMerchantProductsUncached(merchantId));
 }
 
 export async function POST(request: NextRequest) {

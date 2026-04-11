@@ -97,7 +97,7 @@ const navItems = [
   {
     href: "/qr-codes",
     label: "New Transaction",
-    description: "Checkout builder",
+    description: "Amount-based QR",
     icon: QrIcon,
   },
   {
@@ -123,10 +123,6 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/login")) {
-    return null;
-  }
-
   return (
     <>
       <div
@@ -149,7 +145,7 @@ export function Sidebar({
             Merchant Portal
           </h1>
           <p className="mt-2 text-sm leading-6 text-emerald-50/72">
-            Checkout, catalog, and settlement oversight tuned for daily store operations.
+            Payment QR, catalog, and settlement oversight tuned for daily store operations.
           </p>
         </div>
 
@@ -198,7 +194,7 @@ export function Sidebar({
           <div className="merchant-sidebar-card p-4">
             <p className="text-sm font-semibold text-white">Fast lane</p>
             <p className="mt-1 text-xs leading-5 text-emerald-50/66">
-              Open checkout for the next customer or jump into stock adjustments before the rush starts.
+              Enter the next transaction total or jump into stock adjustments before the rush starts.
             </p>
             <div className="mt-3 grid gap-2">
               <Link
@@ -206,7 +202,7 @@ export function Sidebar({
                 onClick={onClose}
                 className="material-button-primary inline-flex min-h-10 items-center justify-center px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
               >
-                Launch Checkout
+                Create Payment QR
               </Link>
               <Link
                 href="/products"

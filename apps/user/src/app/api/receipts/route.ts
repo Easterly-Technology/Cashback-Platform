@@ -80,19 +80,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create transaction items
-      for (const item of payload.items) {
-        await tx.transactionItem.create({
-          data: {
-            transactionId: transaction.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            lineTotal: item.lineTotal,
-          },
-        });
-      }
-
       // Update QR code status
       await tx.transactionQrCode.update({
         where: { id: qrCodeId },

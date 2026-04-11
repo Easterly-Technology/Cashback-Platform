@@ -29,10 +29,6 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/login")) {
-    return null;
-  }
-
   const visibleNavItems = navItems.filter(
     (item) => !item.minRole || item.minRole === userRole,
   );

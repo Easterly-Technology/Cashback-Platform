@@ -1,19 +1,16 @@
 import Link from "next/link";
 import { prisma } from "@cashback/database";
-import {
-  calculateDailyRelease,
-  daysUntilFullRelease,
-  getTokenSettingsSnapshot,
-} from "@cashback/shared";
+import type { UserDashboardSummary } from "@/lib/dashboard-summary";
+import { ReleaseForecastCard } from "@/components/tokens/release-forecast-card";
 
-export async function TabRewards({ userId }: { userId: string }) {
-  const [entitlement, settings, releases, orderStats] = await Promise.all([
-    prisma.userTokenEntitlement.findUnique({ where: { userId } }),
-    prisma.platformSetting.findMany({
-      where: {
-        key: { in: ["token_multiplier", "token_release_rate"] },
-      },
-    }),
+export async function TabRewards({
+  summary,
+  userId,
+}: {
+  summary: UserDashboardSummary;
+  userId: string;
+}) {
+  const [releases, orderStats] = await Promise.all([
     prisma.tokenReleaseLog.findMany({
       where: { userId },
       orderBy: { releaseDate: "desc" },
@@ -26,20 +23,12 @@ export async function TabRewards({ userId }: { userId: string }) {
     }),
   ]);
 
-  const tokenSettings = getTokenSettingsSnapshot(settings);
-  const entitled = Number(entitlement?.entitledTokens ?? 0);
-  const released = Number(entitlement?.releasedTokens ?? 0);
-  const available = Number(entitlement?.availableTokens ?? 0);
-  const dailyRelease = calculateDailyRelease(
-    entitled,
-    released,
-    tokenSettings.releaseRate,
-  ).toNumber();
-  const daysRemaining = daysUntilFullRelease(
-    entitled,
-    released,
-    tokenSettings.releaseRate,
-  );
+  const tokenSettings = summary.tokenSettings;
+  const entitled = summary.entitledTokens;
+  const released = summary.releasedTokens;
+  const available = summary.availableTokens;
+  const dailyRelease = summary.dailyRelease;
+  const daysRemaining = summary.daysRemaining;
   const releasedPct =
     entitled > 0 ? Math.min((released / entitled) * 100, 100) : 0;
   const usedInMarketplace = Number(orderStats._sum.tokenAmount ?? 0);
@@ -56,7 +45,7 @@ export async function TabRewards({ userId }: { userId: string }) {
             {entitled.toLocaleString()}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            = RM{Number(entitlement?.totalSpending ?? 0).toLocaleString()} &times;{" "}
+            = RM{summary.totalSpending.toLocaleString()} &times;{" "}
             {tokenSettings.multiplier}
           </p>
         </div>
@@ -97,6 +86,13 @@ export async function TabRewards({ userId }: { userId: string }) {
           Estimated full release: ~{daysRemaining} days remaining
         </p>
       </div>
+
+      <ReleaseForecastCard
+        entitledTokens={entitled}
+        releasedTokens={released}
+        availableTokens={available}
+        releaseRate={tokenSettings.releaseRate}
+      />
 
       {/* Release History */}
       <div className="material-card overflow-hidden">

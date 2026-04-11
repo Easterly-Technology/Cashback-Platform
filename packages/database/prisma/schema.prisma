@@ -100,9 +100,8 @@ model Product {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  merchant         Merchant          @relation(fields: [merchantId], references: [id])
-  inventory        Inventory?
-  transactionItems TransactionItem[]
+  merchant  Merchant   @relation(fields: [merchantId], references: [id])
+  inventory Inventory?
 
   @@index([merchantId])
   @@map("products")
@@ -144,7 +143,6 @@ model Transaction {
   user     User     @relation(fields: [userId], references: [id])
   merchant Merchant @relation(fields: [merchantId], references: [id])
   qrCode   TransactionQrCode? @relation(fields: [qrCodeId], references: [id])
-  items    TransactionItem[]
 
   @@index([userId, createdAt])
   @@index([merchantId, createdAt])
@@ -161,24 +159,10 @@ enum TransactionStatus {
   @@map("transaction_status")
 }
 
-model TransactionItem {
-  id            String  @id @default(uuid()) @db.Uuid
-  transactionId String  @map("transaction_id") @db.Uuid
-  productId     String  @map("product_id") @db.Uuid
-  quantity      Int
-  unitPrice     Decimal @map("unit_price") @db.Decimal(18, 4)
-  lineTotal     Decimal @map("line_total") @db.Decimal(18, 4)
-
-  transaction Transaction @relation(fields: [transactionId], references: [id])
-  product     Product     @relation(fields: [productId], references: [id])
-
-  @@map("transaction_items")
-}
-
 model TransactionQrCode {
   id         String   @id @default(uuid()) @db.Uuid
   merchantId String   @map("merchant_id") @db.Uuid
-  payload    Json     // items, amounts, etc.
+  payload    Json     // signed amount-based QR checkout data
   hmac       String   @db.VarChar(64) // HMAC-SHA256 signature
   status     QrCodeStatus @default(PENDING)
   expiresAt  DateTime @map("expires_at") @db.Timestamptz

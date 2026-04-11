@@ -9,66 +9,13 @@ import {
 } from "@cashback/shared";
 import Decimal from "decimal.js";
 import { auth } from "@/lib/auth";
-import { getUserCashSummary } from "@/lib/cash-summary";
-
-function getDateOnly(date: Date) {
-  return new Date(date.toISOString().split("T")[0]);
-}
+import { getExchangeSnapshotUncached } from "@/lib/exchange-snapshot";
 
 export async function GET() {
-  const today = getDateOnly(new Date());
   const session = await auth();
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
-  const [listings, recentOrders, settings, cashSummary] = await Promise.all([
-    prisma.marketplaceListing.findMany({
-      where: { listingDate: today },
-      orderBy: { priceTier: "asc" },
-    }),
-    prisma.marketplaceOrder.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: {
-        user: {
-          select: { name: true },
-        },
-      },
-    }),
-    prisma.platformSetting.findMany({
-      where: {
-        key: {
-          in: ["marketplace_enabled"],
-        },
-      },
-    }),
-    userId ? getUserCashSummary(userId) : Promise.resolve(null),
-  ]);
-
-  const normalizedListings = listings
-    .map((listing) => ({
-      id: listing.id,
-      priceTier: Number(listing.priceTier),
-      totalQty: Math.max(0, Math.floor(Number(listing.totalQuantity))),
-      remainingQty: Math.max(0, Math.floor(Number(listing.remainingQty))),
-      status: listing.status,
-    }))
-    .filter((listing) => listing.totalQty > 0 && listing.remainingQty > 0);
-
-  return Response.json({
-    date: today.toISOString(),
-    marketplaceEnabled: getTokenSettingsSnapshot(settings).marketplaceEnabled,
-    exchangeEnabled: getTokenSettingsSnapshot(settings).marketplaceEnabled,
-    listings: normalizedListings,
-    cashSummary,
-    recentOrders: recentOrders.map((order) => ({
-      id: order.id,
-      userName: order.user.name,
-      tokenAmount: Number(order.tokenAmount),
-      cashValue: Number(order.cashValue),
-      pricePerToken: Number(order.pricePerToken),
-      createdAt: order.createdAt.toISOString(),
-    })),
-  });
+  return Response.json(await getExchangeSnapshotUncached(userId));
 }
 
 export async function POST(request: NextRequest) {

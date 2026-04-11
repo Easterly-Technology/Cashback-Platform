@@ -2,13 +2,6 @@ import { createHmac } from "node:crypto";
 
 export interface QrPayload {
   merchantId: string;
-  items: Array<{
-    productId: string;
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    lineTotal: number;
-  }>;
   totalAmount: number;
   qrCodeId: string;
   expiresAt: string; // ISO date string

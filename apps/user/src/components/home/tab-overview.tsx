@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@cashback/database";
+import { formatCurrency } from "@cashback/shared";
+import type { UserDashboardSummary } from "@/lib/dashboard-summary";
 import {
-  calculateDailyRelease,
-  daysUntilFullRelease,
-  formatCurrency,
-  getTokenSettingsSnapshot,
-} from "@cashback/shared";
+  buildRewardJourney,
+  formatTokenAmount,
+  getNextRewardAction,
+  type JourneyStepStatus,
+} from "@/lib/reward-journey";
 import {
   ScanIcon,
   MarketplaceIcon,
@@ -34,34 +36,65 @@ const quickActions = [
   },
 ];
 
-export async function TabOverview({ userId }: { userId: string }) {
-  const [entitlement, latestOrder, settings] = await Promise.all([
-    prisma.userTokenEntitlement.findUnique({ where: { userId } }),
-    prisma.marketplaceOrder.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.platformSetting.findMany({
-      where: { key: { in: ["token_release_rate"] } },
-    }),
-  ]);
+const journeyStatusClass: Record<JourneyStepStatus, string> = {
+  complete: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  current: "border-blue-200 bg-blue-50 text-blue-700 shadow-sm",
+  upcoming: "border-slate-200 bg-white/80 text-slate-500",
+};
 
-  const tokenSettings = getTokenSettingsSnapshot(settings);
-  const entitled = Number(entitlement?.entitledTokens ?? 0);
-  const released = Number(entitlement?.releasedTokens ?? 0);
-  const tomorrowRelease = calculateDailyRelease(
-    entitled,
-    released,
-    tokenSettings.releaseRate,
-  ).toNumber();
-  const remainingDays = daysUntilFullRelease(
-    entitled,
-    released,
-    tokenSettings.releaseRate,
-  );
+const journeyStatusLabel: Record<JourneyStepStatus, string> = {
+  complete: "Done",
+  current: "Now",
+  upcoming: "Next",
+};
+
+export async function TabOverview({
+  summary,
+  userId,
+}: {
+  summary: UserDashboardSummary;
+  userId: string;
+}) {
+  const latestOrder = await prisma.marketplaceOrder.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const journeyInput = {
+    totalSpending: summary.totalSpending,
+    entitledTokens: summary.entitledTokens,
+    releasedTokens: summary.releasedTokens,
+    availableTokens: summary.availableTokens,
+    availableToWithdraw: summary.cashSummary.availableToWithdraw,
+    dailyRelease: summary.dailyRelease,
+    tradeCount: summary.cashSummary.tradeCount,
+    pendingWithdrawalCount: summary.cashSummary.pendingWithdrawalCount,
+    completedWithdrawalCount: summary.cashSummary.completedWithdrawalCount,
+  };
+  const nextAction = getNextRewardAction(journeyInput);
+  const journeySteps = buildRewardJourney(journeyInput);
 
   return (
     <div className="space-y-4">
+      {/* Next Best Action */}
+      <Link
+        href={nextAction.href}
+        className="material-card block overflow-hidden p-5 transition-transform hover:-translate-y-0.5"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="material-chip">Next Step</span>
+          <span className="text-xs font-semibold text-blue-700">
+            {nextAction.cta} &rarr;
+          </span>
+        </div>
+        <h2 className="mt-4 text-lg font-bold tracking-tight text-slate-950">
+          {nextAction.title}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          {nextAction.description}
+        </p>
+      </Link>
+
       {/* QR Scan CTA */}
       <div className="material-card-flat flex items-center gap-4 px-5 py-4">
         <div className="icon-tile rounded-[20px] bg-blue-600/12 text-blue-700">
@@ -81,6 +114,49 @@ export async function TabOverview({ userId }: { userId: string }) {
         >
           Transactions
         </Link>
+      </div>
+
+      {/* Reward Journey */}
+      <div className="material-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-950">
+              Reward Journey
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Follow the path from purchase to withdrawable cash.
+            </p>
+          </div>
+          <span className="material-chip material-chip-muted">
+            {formatTokenAmount(summary.availableTokens)} ready
+          </span>
+        </div>
+        <div className="mt-4 space-y-2">
+          {journeySteps.map((step, index) => (
+            <Link
+              key={step.label}
+              href={step.href}
+              className={`flex items-start gap-3 rounded-2xl border px-3 py-3 transition hover:-translate-y-0.5 ${
+                journeyStatusClass[step.status]
+              }`}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-sm font-bold">
+                {index + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{step.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-70">
+                    {journeyStatusLabel[step.status]}
+                  </span>
+                </span>
+                <span className="mt-1 block text-xs leading-5 opacity-80">
+                  {step.description}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Quick Actions */}
@@ -114,10 +190,12 @@ export async function TabOverview({ userId }: { userId: string }) {
             Next Release
           </p>
           <p className="mt-2 text-xl font-bold text-blue-700">
-            +{tomorrowRelease.toLocaleString()}
+            +{summary.dailyRelease.toLocaleString()}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {remainingDays > 0 ? `${remainingDays} days left` : "Fully released"}
+            {summary.daysRemaining > 0
+              ? `${summary.daysRemaining} days left`
+              : "Fully released"}
           </p>
         </div>
         <div className="material-stat p-4">

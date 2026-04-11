@@ -157,8 +157,6 @@ export function TopBar({
     }
   }, [dropdownOpen]);
 
-  if (pathname.startsWith("/login")) return null;
-
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 lg:left-72 lg:px-6 lg:pt-4">
       <div className="material-surface flex items-center gap-3 rounded-[24px] px-4 py-2.5">

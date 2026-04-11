@@ -6,6 +6,10 @@
     "dev": "turbo dev",
     "dev:local": "bash ./scripts/dev-local.sh",
     "build": "turbo build",
+    "analyze:admin": "ANALYZE=true pnpm --filter @cashback/admin build",
+    "analyze:merchant": "ANALYZE=true pnpm --filter @cashback/merchant build",
+    "analyze:user": "ANALYZE=true pnpm --filter @cashback/user build",
+    "analyze": "pnpm analyze:user && pnpm analyze:merchant && pnpm analyze:admin",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
@@ -18,6 +22,7 @@
     "db:studio": "pnpm --filter @cashback/database studio"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.5.14",
     "@prisma/nextjs-monorepo-workaround-plugin": "^7.7.0",
     "turbo": "^2.5.0",
     "typescript": "^5.8.0"

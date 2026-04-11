@@ -40,12 +40,6 @@ function UserAvatar({ name }: { name: string }) {
 
 export function BottomNav() {
   const pathname = usePathname();
-  const isAuthPage = pathname === "/login" || pathname === "/register";
-  const isScanPage = pathname.startsWith("/scan/");
-
-  if (isAuthPage || isScanPage) {
-    return null;
-  }
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -95,14 +89,6 @@ function BellIcon({ className }: { className?: string }) {
 }
 
 export function TopBar({ user }: { user: UserIdentity | null }) {
-  const pathname = usePathname();
-  const isAuthPage = pathname === "/login" || pathname === "/register";
-  const isScanPage = pathname.startsWith("/scan/");
-
-  if (isAuthPage || isScanPage) {
-    return null;
-  }
-
   const userName = user?.name?.trim() || "Cashback Member";
 
   return (

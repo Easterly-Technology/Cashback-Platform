@@ -1,12 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
-
-const authCookiePrefix = "cashback-user";
-const authCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/",
-  secure: process.env.NODE_ENV === "production",
-};
+import { authCookieOptions, sessionTokenCookieName } from "@/lib/auth-cookies";
 
 const authConfig = {
   secret:
@@ -15,15 +8,15 @@ const authConfig = {
     "dev-secret-not-for-production",
   cookies: {
     sessionToken: {
-      name: `${authCookiePrefix}.session-token`,
+      name: sessionTokenCookieName,
       options: authCookieOptions,
     },
     callbackUrl: {
-      name: `${authCookiePrefix}.callback-url`,
+      name: "cashback-user.callback-url",
       options: authCookieOptions,
     },
     csrfToken: {
-      name: `${authCookiePrefix}.csrf-token`,
+      name: "cashback-user.csrf-token",
       options: authCookieOptions,
     },
   },

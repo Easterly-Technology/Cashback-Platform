@@ -1,14 +1,13 @@
 import { z } from "zod";
 
 export const createTransactionSchema = z.object({
-  items: z
-    .array(
-      z.object({
-        productId: z.string().uuid(),
-        quantity: z.number().int().positive(),
-      }),
-    )
-    .min(1),
+  totalAmount: z
+    .number()
+    .positive("Amount must be greater than zero")
+    .refine(
+      (value) => Math.round(value * 100) === value * 100,
+      "Amount must use at most 2 decimal places",
+    ),
 });
 
 export const confirmTransactionSchema = z.object({

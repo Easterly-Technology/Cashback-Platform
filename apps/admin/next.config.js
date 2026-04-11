@@ -1,5 +1,8 @@
 const path = require("path");
 const { loadEnvConfig } = require("@next/env");
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
 const { PrismaPlugin } = require("@prisma/nextjs-monorepo-workaround-plugin");
 
 loadEnvConfig(path.resolve(__dirname, "../.."));
@@ -25,4 +28,4 @@ const nextConfig = {
       "dev-secret-not-for-production",
   },
 };
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

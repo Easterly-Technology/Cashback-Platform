@@ -73,20 +73,20 @@ const pageMap = [
   {
     path: "/qr-codes",
     title: "New Transaction",
-    subtitle: "Build a cart, generate a signed QR, and move the customer to confirmation quickly.",
-    action: { href: "/products", label: "Check Stock" },
+    subtitle: "Enter the final transaction amount, generate a signed QR, and move the customer to confirmation quickly.",
+    action: { href: "/transactions", label: "View Sales" },
   },
   {
     path: "/products",
     title: "Products",
     subtitle: "Keep your catalog active, your inventory healthy, and price changes under control.",
-    action: { href: "/qr-codes", label: "Launch Checkout" },
+    action: { href: "/qr-codes", label: "Create Payment QR" },
   },
   {
     path: "/",
     title: "Dashboard",
     subtitle: "Your sales pulse, stock watchlist, and finance follow-up in one view.",
-    action: { href: "/qr-codes", label: "Launch Checkout" },
+    action: { href: "/qr-codes", label: "Create Payment QR" },
   },
 ] as const;
 
@@ -172,10 +172,6 @@ export function TopBar({
     return () => document.removeEventListener("keydown", handleKey);
   }, [dropdownOpen]);
 
-  if (pathname.startsWith("/login")) {
-    return null;
-  }
-
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 lg:left-72 lg:px-6 lg:pt-4">
       <div className="material-surface flex min-h-[82px] items-center gap-3 rounded-[28px] border border-white/70 px-4 py-3 sm:px-5">
@@ -250,7 +246,7 @@ export function TopBar({
                   onClick={() => setDropdownOpen(false)}
                   className="block rounded-[14px] px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
                 >
-                  Launch checkout
+                  Create payment QR
                 </Link>
                 <Link
                   href="/products"
