@@ -48,7 +48,7 @@ export function LoginForm({
             Continue earning, releasing, and trading cashback rewards in one place.
           </h1>
           <p className="material-subtitle mt-4 max-w-xl">
-            Sign in to check your balances, browse the marketplace, and use the exchange with a cleaner app-first experience.
+            Sign in to check your balances, use Discover, and trade from a cleaner app-first experience.
           </p>
           <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
@@ -64,7 +64,7 @@ export function LoginForm({
                 Purchase Flow
               </p>
               <p className="mt-2 text-sm text-slate-700">
-                Confirm merchant receipts, browse products, and exchange released tokens.
+                Confirm merchant receipts, discover partners, and trade released tokens.
               </p>
             </div>
           </div>

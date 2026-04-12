@@ -11,12 +11,15 @@ export default function AppShell({
   initialUser: UserIdentity | null;
 }) {
   return (
-    <>
+    <div className="min-h-screen overflow-x-hidden bg-[#0b0e11] text-[#eaecef]">
       <TopBar user={initialUser} />
-      <main className="mx-auto max-w-xl px-4 pb-28 pt-16 sm:px-5">
-        {children}
+      <main className="mx-auto min-h-screen max-w-xl bg-[#0b0e11] px-3 pt-14 sm:border-x sm:border-[#1e2329] sm:px-4">
+        <div className="min-h-[calc(100vh-8.5rem)] bg-[#0b0e11] pb-0 pt-3 text-[#eaecef]">
+          {children}
+        </div>
+        <div className="h-24 bg-[#0b0e11]" aria-hidden="true" />
       </main>
       <BottomNav />
-    </>
+    </div>
   );
 }

@@ -50,7 +50,7 @@ export function getNextRewardAction(
 ): NextRewardAction {
   if (input.availableToWithdraw > 0) {
     return {
-      href: "/profile/asset",
+      href: "/profile/withdrawal",
       title: "Withdraw ready cash",
       description: `You have RM${input.availableToWithdraw.toLocaleString(
         undefined,
@@ -62,7 +62,7 @@ export function getNextRewardAction(
 
   if ((input.pendingWithdrawalCount ?? 0) > 0) {
     return {
-      href: "/profile/asset",
+      href: "/profile/withdrawal",
       title: "Track your withdrawal",
       description:
         "Your cash request is in progress. Check the wallet for the latest status.",
@@ -72,12 +72,12 @@ export function getNextRewardAction(
 
   if (input.availableTokens > 0) {
     return {
-      href: "/exchange",
-      title: "Exchange released tokens",
+      href: "/trade",
+      title: "Trade released tokens",
       description: `${formatTokenAmount(
         input.availableTokens,
       )} tokens are ready to sell for cash value.`,
-      cta: "Exchange",
+      cta: "Trade",
     };
   }
 
@@ -86,7 +86,7 @@ export function getNextRewardAction(
     input.dailyRelease > 0
   ) {
     return {
-      href: "/tokens",
+      href: "/wallet",
       title: "Track the next release",
       description: `About ${formatTokenAmount(
         input.dailyRelease,
@@ -97,17 +97,17 @@ export function getNextRewardAction(
 
   if (input.totalSpending <= 0) {
     return {
-      href: "/marketplace",
+      href: "/discover",
       title: "Start your cashback journey",
       description:
-        "Browse partners, shop in store, then confirm the merchant QR to earn tokens.",
-      cta: "Browse",
+        "Discover partners, shop in store, then confirm the merchant QR to earn tokens.",
+      cta: "Discover",
     };
   }
 
   if ((input.completedWithdrawalCount ?? 0) > 0) {
     return {
-      href: "/marketplace",
+      href: "/discover",
       title: "Earn on the next purchase",
       description:
         "Your previous reward cycle is complete. Make another purchase to grow the next one.",
@@ -116,10 +116,10 @@ export function getNextRewardAction(
   }
 
   return {
-    href: "/transactions",
+    href: "/wallet/history",
     title: "Review reward activity",
     description:
-      "Check purchases, token releases, exchanges, and cash movement in one timeline.",
+      "Check purchases, token releases, trades, and cash movement in one timeline.",
     cta: "Review",
   };
 }
@@ -130,22 +130,22 @@ export function buildRewardJourney(
   const currentIndex = getCurrentJourneyIndex(input);
   const steps = [
     {
-      href: "/marketplace",
+      href: "/discover",
       label: "Shop",
       description: "Pay at a participating merchant.",
     },
     {
-      href: "/transactions",
+      href: "/wallet/history",
       label: "Confirm",
       description: "Scan the merchant QR and save the purchase.",
     },
     {
-      href: "/tokens",
+      href: "/wallet",
       label: "Release",
       description: "Tokens become usable day by day.",
     },
     {
-      href: "/exchange",
+      href: "/trade",
       label: "Cash out",
       description: "Sell tokens, then request withdrawal.",
     },

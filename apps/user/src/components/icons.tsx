@@ -25,7 +25,7 @@ export function HomeIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function MarketplaceIcon(props: SVGProps<SVGSVGElement>) {
+export function DiscoverIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <IconBase {...props}>
       <path d="M4 8.5h16" />
@@ -36,7 +36,7 @@ export function MarketplaceIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function ExchangeIcon(props: SVGProps<SVGSVGElement>) {
+export function TradeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <IconBase {...props}>
       <path d="M7 7.5h10" />
@@ -52,6 +52,16 @@ export function TokensIcon(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <circle cx="12" cy="12" r="7.5" />
       <path d="M9.5 10.5c0-1.1 1-2 2.5-2s2.5.7 2.5 1.8c0 2.8-5 1.1-5 3.9 0 1.1 1.1 1.8 2.5 1.8 1.7 0 2.7-.9 2.7-2" />
+    </IconBase>
+  );
+}
+
+export function HistoryIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.49-6.01" />
+      <path d="M3.5 5.5v4h4" />
+      <path d="M12 7.5v5l3.25 2" />
     </IconBase>
   );
 }

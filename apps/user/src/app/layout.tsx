@@ -19,7 +19,7 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${jakarta.className} antialiased`}>
+      <body className={`${jakarta.className} binance-app antialiased`}>
         {children}
       </body>
     </html>

@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --dir ../.. run db:generate && if [ \"$VERCEL_ENV\" = \"preview\" ]; then pnpm --dir ../.. run db:seed:preview; fi && pnpm --dir ../.. exec turbo build --filter=@cashback/admin",
+  "buildCommand": "pnpm --dir ../.. run db:generate && if [ \"$VERCEL_ENV\" = \"preview\" ]; then pnpm --dir ../.. run db:push && pnpm --dir ../.. run db:seed:preview; fi && pnpm --dir ../.. exec turbo build --filter=@cashback/admin",
   "crons": [
     {
       "path": "/api/cron/token-pool",

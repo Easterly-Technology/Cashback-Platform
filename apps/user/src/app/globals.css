@@ -1,32 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --app-primary: 37 99 235;
-  --app-primary-strong: 30 64 175;
-  --app-primary-soft: 219 234 254;
-  --app-accent: 14 165 233;
-  --app-surface: 255 255 255;
-  --app-page: 243 247 253;
-  --app-outline: 203 213 225;
-  --app-ink: 15 23 42;
+  --app-primary: 240 185 11;
+  --app-primary-strong: 248 211 58;
+  --app-primary-soft: 43 49 57;
+  --app-accent: 14 203 129;
+  --app-surface: 24 26 32;
+  --app-page: 11 14 17;
+  --app-outline: 43 49 57;
+  --app-ink: 234 236 239;
 }
 
 html {
-  color-scheme: light;
+  background: #0b0e11;
+  color-scheme: dark;
 }
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top center, rgba(37, 99, 235, 0.16), transparent 36%),
-    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.1), transparent 30%),
-    linear-gradient(180deg, #fcfdff 0%, rgb(var(--app-page)) 56%, #edf3fb 100%);
+  background: #0b0e11;
   color: rgb(var(--app-ink));
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.14);
-  color: rgb(var(--app-ink));
+  background: rgba(240, 185, 11, 0.28);
+  color: #f8d33a;
 }
 
 :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
@@ -110,7 +108,7 @@ textarea {
 .material-title {
   font-size: clamp(1.9rem, 4vw, 2.75rem);
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   line-height: 1.05;
 }
 
@@ -131,7 +129,7 @@ textarea {
   color: rgb(30 64 175);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -195,7 +193,7 @@ textarea {
   padding: 0.38rem 0.72rem;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -258,4 +256,255 @@ textarea {
   border-color: rgba(96, 165, 250, 0.28);
   background: rgba(239, 246, 255, 0.92);
   color: rgb(29 78 216);
+}
+
+.binance-app {
+  min-height: 100vh;
+  background: #0b0e11;
+  color: #eaecef;
+}
+
+.binance-app :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+  border-color: #2b3139;
+  border-radius: 8px;
+  background: #0b0e11;
+  color: #eaecef;
+  box-shadow: none;
+}
+
+.binance-app :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select):focus {
+  border-color: #f0b90b;
+  box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.22);
+}
+
+.binance-app input::placeholder,
+.binance-app textarea::placeholder {
+  color: #848e9c;
+}
+
+.binance-app [class*="tracking-"] {
+  letter-spacing: 0 !important;
+}
+
+.binance-app .material-surface,
+.binance-app .material-card,
+.binance-app .material-card-flat,
+.binance-app .material-stat,
+.binance-app .material-table-shell {
+  border: 1px solid #1e2329;
+  border-radius: 8px;
+  background: #181a20;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.binance-app .material-empty {
+  border: 1px dashed #2b3139;
+  border-radius: 8px;
+  background: #181a20;
+  box-shadow: none;
+}
+
+.binance-app .material-hero {
+  border: 1px solid #1e2329;
+  border-radius: 8px;
+  background: #181a20;
+  box-shadow: none;
+}
+
+.binance-app .material-subtitle {
+  color: #848e9c;
+}
+
+.binance-app .material-chip {
+  border-color: #2b3139;
+  border-radius: 6px;
+  background: #2b3139;
+  color: #f0b90b;
+  letter-spacing: 0;
+}
+
+.binance-app .material-chip-muted {
+  border-color: #2b3139;
+  background: #1e2329;
+  color: #848e9c;
+}
+
+.binance-app .material-button-primary {
+  border-radius: 8px;
+  background: #f0b90b;
+  color: #181a20;
+  box-shadow: none;
+}
+
+.binance-app .material-button-primary:hover {
+  background: #f8d33a;
+}
+
+.binance-app .material-button-tonal,
+.binance-app .material-button-outlined {
+  border: 1px solid #2b3139;
+  border-radius: 8px;
+  background: #181a20;
+  color: #f0b90b;
+  box-shadow: none;
+}
+
+.binance-app .material-button-tonal:hover,
+.binance-app .material-button-outlined:hover {
+  background: #1e2329;
+}
+
+.binance-app .material-alert {
+  border-color: #2b3139;
+  border-radius: 8px;
+  background: #181a20;
+  color: #eaecef;
+}
+
+.binance-app .material-alert-danger {
+  border-color: rgba(246, 70, 93, 0.42);
+  background: #2d171f;
+  color: #f6465d;
+}
+
+.binance-app .material-alert-warning {
+  border-color: rgba(240, 185, 11, 0.42);
+  background: #2b2615;
+  color: #f0b90b;
+}
+
+.binance-app .material-alert-info {
+  border-color: rgba(240, 185, 11, 0.32);
+  background: #1e2329;
+  color: #f0b90b;
+}
+
+.binance-app .material-table-shell table thead tr,
+.binance-app .material-table-shell table tbody tr:hover {
+  background: #1e2329;
+}
+
+.binance-app .status-badge {
+  border-radius: 6px;
+  letter-spacing: 0;
+}
+
+.binance-app .status-badge-neutral {
+  background: #1e2329;
+  color: #848e9c;
+}
+
+.binance-app .status-badge-success {
+  background: #10261f;
+  color: #0ecb81;
+}
+
+.binance-app .status-badge-info,
+.binance-app .status-badge-warning {
+  background: #2b2615;
+  color: #f0b90b;
+}
+
+.binance-app .status-badge-danger {
+  background: #2d171f;
+  color: #f6465d;
+}
+
+.binance-app .icon-tile {
+  border-radius: 8px;
+  background: #2b3139;
+  color: #f0b90b;
+}
+
+.binance-app .text-slate-950,
+.binance-app .text-slate-900,
+.binance-app .text-slate-800,
+.binance-app .text-slate-700,
+.binance-app .text-gray-900,
+.binance-app .text-gray-800,
+.binance-app .text-gray-700 {
+  color: #eaecef !important;
+}
+
+.binance-app .text-slate-600,
+.binance-app .text-slate-500,
+.binance-app .text-slate-400,
+.binance-app .text-gray-600,
+.binance-app .text-gray-500,
+.binance-app .text-gray-400 {
+  color: #848e9c !important;
+}
+
+.binance-app .text-blue-700,
+.binance-app .text-blue-600,
+.binance-app .text-indigo-700,
+.binance-app .text-indigo-600,
+.binance-app .text-amber-700,
+.binance-app .text-amber-600 {
+  color: #f0b90b !important;
+}
+
+.binance-app .text-emerald-700,
+.binance-app .text-emerald-600,
+.binance-app .text-green-600,
+.binance-app .text-green-500 {
+  color: #0ecb81 !important;
+}
+
+.binance-app .text-red-700,
+.binance-app .text-red-600,
+.binance-app .text-rose-700,
+.binance-app .text-rose-600 {
+  color: #f6465d !important;
+}
+
+.binance-app .bg-white,
+.binance-app .bg-slate-50,
+.binance-app .bg-gray-50,
+.binance-app .bg-blue-50,
+.binance-app .bg-indigo-50,
+.binance-app .bg-amber-50,
+.binance-app .bg-emerald-50,
+.binance-app .bg-green-50,
+.binance-app .bg-red-50,
+.binance-app .bg-rose-50 {
+  background: #0b0e11 !important;
+}
+
+.binance-app .bg-slate-100,
+.binance-app .bg-slate-200,
+.binance-app .bg-gray-100,
+.binance-app .bg-gray-200,
+.binance-app .hover\:bg-slate-50:hover,
+.binance-app .hover\:bg-slate-50\/80:hover,
+.binance-app .hover\:bg-slate-100:hover,
+.binance-app .hover\:bg-red-50:hover {
+  background: #1e2329 !important;
+}
+
+.binance-app .border-slate-100,
+.binance-app .border-slate-100\/70,
+.binance-app .border-slate-200,
+.binance-app .border-gray-100,
+.binance-app .border-gray-200,
+.binance-app .border-blue-100,
+.binance-app .border-blue-200,
+.binance-app .border-amber-200,
+.binance-app .border-emerald-200,
+.binance-app .border-red-200,
+.binance-app .border-rose-200 {
+  border-color: #1e2329 !important;
+}
+
+.binance-app .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.binance-app .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e2329 !important;
+}
+
+.binance-app .rounded-2xl,
+.binance-app .rounded-\[20px\],
+.binance-app .rounded-\[24px\],
+.binance-app .rounded-\[28px\] {
+  border-radius: 8px !important;
 }

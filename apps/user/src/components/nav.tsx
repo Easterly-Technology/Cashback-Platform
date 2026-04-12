@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  DiscoverIcon,
   HomeIcon,
-  MarketplaceIcon,
-  ExchangeIcon,
+  ScanIcon,
+  TradeIcon,
   TokensIcon,
-  ProfileIcon,
 } from "@/components/icons";
 
 const navItems = [
   { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/marketplace", label: "Marketplace", icon: MarketplaceIcon },
-  { href: "/exchange", label: "Exchange", icon: ExchangeIcon },
-  { href: "/tokens", label: "Tokens", icon: TokensIcon },
-  { href: "/profile", label: "Profile", icon: ProfileIcon },
+  { href: "/discover", label: "Discover", icon: DiscoverIcon },
+  { href: "/trade", label: "Trade", icon: TradeIcon },
+  { href: "/wallet", label: "Wallet", icon: TokensIcon },
 ];
 
 export type UserIdentity = {
@@ -32,7 +31,7 @@ function UserAvatar({ name }: { name: string }) {
     .slice(0, 2);
 
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-[11px] font-bold text-white shadow-sm">
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0b90b] text-[11px] font-bold text-[#0b0e11]">
       {initials}
     </div>
   );
@@ -42,8 +41,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="material-surface mx-auto flex max-w-xl items-center gap-1 rounded-[24px] px-1.5 py-1.5">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#1e2329] bg-[#0b0e11] pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto flex h-16 max-w-xl items-center px-1">
         {navItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -55,13 +54,14 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-center text-[11px] leading-none transition-all ${
+              aria-current={isActive ? "page" : undefined}
+              className={`flex h-full flex-1 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] leading-none transition-colors ${
                 isActive
-                  ? "material-button-tonal font-semibold shadow-sm"
-                  : "font-medium text-slate-500 hover:bg-white/70 hover:text-slate-900"
+                  ? "font-semibold text-[#f0b90b]"
+                  : "font-medium text-[#848e9c] hover:text-[#eaecef]"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
           );
@@ -88,31 +88,61 @@ function BellIcon({ className }: { className?: string }) {
   );
 }
 
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 export function TopBar({ user }: { user: UserIdentity | null }) {
   const userName = user?.name?.trim() || "Cashback Member";
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-2.5 pt-2.5">
-      <div className="material-surface mx-auto flex max-w-xl items-center justify-between rounded-[24px] px-3.5 py-2.5">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 shadow-sm">
-            <span className="text-sm font-bold text-white">CB</span>
-          </div>
-          <p className="text-sm font-bold tracking-tight text-slate-950">
-            Cashback
-          </p>
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1e2329] bg-[#0b0e11]">
+      <div className="mx-auto flex h-14 max-w-xl items-center gap-3 px-3">
+        <Link
+          href="/profile"
+          className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#f0b90b]"
+          aria-label="Open profile"
+        >
+          <UserAvatar name={userName} />
         </Link>
+
+        <Link
+          href="/discover"
+          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-[#1e2329] px-3 text-sm font-medium text-[#848e9c] transition-colors hover:bg-[#2b3139] hover:text-[#eaecef]"
+        >
+          <SearchIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">Search</span>
+        </Link>
+
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-[14px] text-slate-500 transition hover:bg-blue-50 hover:text-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-[#eaecef] transition-colors hover:bg-[#1e2329]"
+            aria-label="Scan"
+          >
+            <ScanIcon className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            className="relative flex h-9 w-9 items-center justify-center rounded-md text-[#eaecef] transition-colors hover:bg-[#1e2329]"
             aria-label="Notifications"
           >
             <BellIcon className="h-[18px] w-[18px]" />
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#f0b90b]" />
           </button>
-          <Link href="/profile">
-            <UserAvatar name={userName} />
-          </Link>
         </div>
       </div>
     </header>

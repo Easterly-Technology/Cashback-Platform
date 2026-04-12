@@ -110,7 +110,7 @@ export function ScanConfirmClient({
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
             You can track this purchase from your dashboard, then follow released
-            tokens in the Tokens screen until they are ready for exchange.
+            tokens in your Wallet until they are ready to trade.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <button
@@ -120,13 +120,13 @@ export function ScanConfirmClient({
               Back to Dashboard
             </button>
             <Link
-              href="/tokens"
+              href="/wallet"
               className="material-button-outlined px-5 py-2.5 text-sm font-semibold"
             >
-              View Tokens
+              View Wallet
             </Link>
             <Link
-              href="/transactions"
+              href="/wallet/history"
               className="material-button-outlined px-5 py-2.5 text-sm font-semibold"
             >
               View History

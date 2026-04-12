@@ -42,7 +42,7 @@ export default function RegisterPage() {
             Start building your cashback balance with a clean, app-first sign-up flow.
           </h1>
           <p className="material-subtitle mt-4 max-w-xl">
-            Create your account to track purchases, earn token rewards, and use the exchange when your balance is released.
+            Create your account to track purchases, earn token rewards, and trade when your balance is released.
           </p>
         </div>
 
